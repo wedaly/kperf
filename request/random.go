@@ -21,10 +21,10 @@ type WeightedRandomRequests struct {
 	wg           sync.WaitGroup
 	ctx          context.Context
 	cancel       context.CancelFunc
-	reqBuilderCh chan RequestBuilder
+	reqBuilderCh chan RESTRequestBuilder
 
 	shares      []int
-	reqBuilders []RequestBuilder
+	reqBuilders []RESTRequestBuilder
 }
 
 // NewWeightedRandomRequests creates new instance of WeightedRandomRequests.
@@ -34,11 +34,11 @@ func NewWeightedRandomRequests(spec *types.LoadProfileSpec) (*WeightedRandomRequ
 	}
 
 	shares := make([]int, 0, len(spec.Requests))
-	reqBuilders := make([]RequestBuilder, 0, len(spec.Requests))
+	reqBuilders := make([]RESTRequestBuilder, 0, len(spec.Requests))
 	for _, r := range spec.Requests {
 		shares = append(shares, r.Shares)
 
-		var builder RequestBuilder
+		var builder RESTRequestBuilder
 		switch {
 		case r.StaleList != nil:
 			builder = newRequestListBuilder(r.StaleList, "0")
@@ -49,7 +49,7 @@ func NewWeightedRandomRequests(spec *types.LoadProfileSpec) (*WeightedRandomRequ
 		case r.QuorumGet != nil:
 			builder = newRequestGetBuilder(r.QuorumGet, "")
 		default:
-			return nil, fmt.Errorf("only support get/list")
+			return nil, fmt.Errorf("not implement for PUT yet")
 		}
 		reqBuilders = append(reqBuilders, builder)
 	}
@@ -58,7 +58,7 @@ func NewWeightedRandomRequests(spec *types.LoadProfileSpec) (*WeightedRandomRequ
 	return &WeightedRandomRequests{
 		ctx:          ctx,
 		cancel:       cancel,
-		reqBuilderCh: make(chan RequestBuilder),
+		reqBuilderCh: make(chan RESTRequestBuilder),
 		shares:       shares,
 		reqBuilders:  reqBuilders,
 	}, nil
@@ -74,7 +74,7 @@ func (r *WeightedRandomRequests) Run(ctx context.Context, total int) {
 		builder := r.randomPick()
 		select {
 		case r.reqBuilderCh <- builder:
-			sum += 1
+			sum++
 		case <-r.ctx.Done():
 			return
 		case <-ctx.Done():
@@ -84,11 +84,11 @@ func (r *WeightedRandomRequests) Run(ctx context.Context, total int) {
 }
 
 // Chan returns channel to get random request.
-func (r *WeightedRandomRequests) Chan() chan RequestBuilder {
+func (r *WeightedRandomRequests) Chan() chan RESTRequestBuilder {
 	return r.reqBuilderCh
 }
 
-func (r *WeightedRandomRequests) randomPick() RequestBuilder {
+func (r *WeightedRandomRequests) randomPick() RESTRequestBuilder {
 	sum := 0
 	for _, s := range r.shares {
 		sum += s
@@ -119,8 +119,8 @@ func (r *WeightedRandomRequests) Stop() {
 	})
 }
 
-// RequestBuilder is used to build rest.Request.
-type RequestBuilder interface {
+// RESTRequestBuilder is used to build rest.Request.
+type RESTRequestBuilder interface {
 	Build(cli rest.Interface) (method string, _ *rest.Request)
 }
 

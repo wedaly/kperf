@@ -19,6 +19,7 @@ const defaultTimeout = 60 * time.Second
 // Schedule files requests to apiserver based on LoadProfileSpec.
 func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.Interface) (*types.ResponseStats, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	rndReqs, err := NewWeightedRandomRequests(spec)
 	if err != nil {
