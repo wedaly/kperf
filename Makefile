@@ -1,5 +1,15 @@
 COMMANDS=kperf
 
+# PREFIX is base path to install.
+PREFIX ?= /usr/local
+
+GO_BUILDTAGS = -tags "osusergo netgo static_build"
+
+# IMAGE_REPO is default repo for image-build recipe.
+IMAGE_REPO ?= localhost:5000
+IMAGE_TAG ?= latest
+IMAGE_NAME = $(IMAGE_REPO)/kperf:$(IMAGE_TAG)
+
 BINARIES=$(addprefix bin/,$(COMMANDS))
 
 # default recipe is build
@@ -9,10 +19,22 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 ALWAYS:
 
 bin/%: cmd/% ALWAYS
-	@go build -o $@ ./$<
+	@GO_ENABLED=0 go build -o $@ ${GO_BUILDTAGS} ./$<
 
 build: $(BINARIES) ## build binaries
 	@echo "$@"
+
+install: ## install binaries
+	@install -d $(PREFIX)/bin
+	@install $(BINARIES) $(PREFIX)/bin
+
+image-build: ## build image
+	@echo building ${IMAGE_NAME}
+	@docker build . -t ${IMAGE_NAME}
+
+image-push: image-build ## push image
+	@echo pushing ${IMAGE_NAME}
+	@docker push ${IMAGE_NAME}
 
 test: ## run test
 	@go test -v ./...
