@@ -14,4 +14,8 @@ type ResponseStats struct {
 	//
 	// NOTE: The key represents quantile.
 	Latencies map[float64]float64
+	// TODO:
+	// 1. Support total read/upload bytes
+	// 2. Support failures partitioned by http code and verb
+	// 3. Support to dump all latency data
 }
