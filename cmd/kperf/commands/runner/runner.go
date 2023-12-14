@@ -116,13 +116,13 @@ func printResponseStats(stats *types.ResponseStats) {
 	fmt.Printf("  Requests/sec: %.2f\n", float64(stats.Total)/stats.Duration.Seconds())
 
 	fmt.Println("  Latency Distribution:")
-	keys := make([]float64, 0, len(stats.Latencies))
-	for q := range stats.Latencies {
+	keys := make([]float64, 0, len(stats.PercentileLatencies))
+	for q := range stats.PercentileLatencies {
 		keys = append(keys, q)
 	}
 	sort.Float64s(keys)
 
 	for _, q := range keys {
-		fmt.Printf("    [%.2f] %.3fs\n", q, stats.Latencies[q])
+		fmt.Printf("    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
 	}
 }
