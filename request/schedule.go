@@ -80,14 +80,11 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 
 	totalDuration := time.Since(start)
 
-	latencies, failures, err := respMetric.Gather()
-	if err != nil {
-		return nil, err
-	}
+	_, percentileLatencies, failures := respMetric.Gather()
 	return &types.ResponseStats{
-		Total:     spec.Total,
-		Failures:  failures,
-		Duration:  totalDuration,
-		Latencies: latencies,
+		Total:               spec.Total,
+		Failures:            failures,
+		Duration:            totalDuration,
+		PercentileLatencies: percentileLatencies,
 	}, nil
 }
