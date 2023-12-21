@@ -95,11 +95,15 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	}
 
 	// override value by flags
-	//
-	// TODO(weifu): do not override if flag is not set
-	profileCfg.Spec.Rate = cliCtx.Int("rate")
-	profileCfg.Spec.Conns = cliCtx.Int("conns")
-	profileCfg.Spec.Total = cliCtx.Int("total")
+	if v := "rate"; cliCtx.IsSet(v) {
+		profileCfg.Spec.Rate = cliCtx.Int(v)
+	}
+	if v := "conns"; cliCtx.IsSet(v) || profileCfg.Spec.Conns == 0 {
+		profileCfg.Spec.Conns = cliCtx.Int(v)
+	}
+	if v := "total"; cliCtx.IsSet(v) || profileCfg.Spec.Total == 0 {
+		profileCfg.Spec.Total = cliCtx.Int(v)
+	}
 
 	if err := profileCfg.Validate(); err != nil {
 		return nil, err
