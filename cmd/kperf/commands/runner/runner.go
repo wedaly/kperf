@@ -116,6 +116,11 @@ func printResponseStats(stats *types.ResponseStats) {
 	fmt.Println("Response stat:")
 	fmt.Printf("  Total: %v\n", stats.Total)
 	fmt.Printf("  Failures: %v\n", stats.Failures)
+	fmt.Println("==========================")
+	for i, v := range stats.FailureList {
+		fmt.Printf("  Failure %d: %v\n", i+1, v)
+	}
+	fmt.Println("==========================")
 	fmt.Printf("  Duration: %v\n", stats.Duration)
 	fmt.Printf("  Requests/sec: %.2f\n", float64(stats.Total)/stats.Duration.Seconds())
 

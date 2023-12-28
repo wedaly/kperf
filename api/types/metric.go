@@ -8,6 +8,8 @@ type ResponseStats struct {
 	Total int
 	// Failures represents number of failure request.
 	Failures int
+	// List of failures
+	FailureList []error
 	// Duration means the time of benchmark.
 	Duration time.Duration
 	// PercentileLatencies represents the latency distribution in seconds.
