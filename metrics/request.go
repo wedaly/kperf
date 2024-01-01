@@ -5,7 +5,6 @@ import (
 	"math"
 	"sort"
 	"sync"
-	"sync/atomic"
 )
 
 // ResponseMetric is a measurement related to http response.
@@ -15,14 +14,13 @@ type ResponseMetric interface {
 	// ObserveFailure observes failure response.
 	ObserveFailure(err error)
 	// Gather returns the summary.
-	Gather() (latencies []float64, percentileLatencies map[float64]float64, failure int, failureList []error)
+	Gather() (latencies []float64, percentileLatencies map[float64]float64, failureList []error)
 }
 
 type responseMetricImpl struct {
-	mu           sync.Mutex
-	failureCount int64
-	failureList  []error
-	latencies    *list.List
+	mu          sync.Mutex
+	failureList []error
+	latencies   *list.List
 }
 
 func NewResponseMetric() ResponseMetric {
@@ -42,14 +40,12 @@ func (m *responseMetricImpl) ObserveLatency(seconds float64) {
 // ObserveFailure implements ResponseMetric.
 func (m *responseMetricImpl) ObserveFailure(err error) {
 	m.failureList = append(m.failureList, err)
-	atomic.AddInt64(&m.failureCount, 1)
 }
 
 // Gather implements ResponseMetric.
-func (m *responseMetricImpl) Gather() ([]float64, map[float64]float64, int, []error) {
+func (m *responseMetricImpl) Gather() ([]float64, map[float64]float64, []error) {
 	latencies := m.dumpLatencies()
-
-	return latencies, buildPercentileLatencies(latencies), int(atomic.LoadInt64(&m.failureCount)), m.failureList
+	return latencies, buildPercentileLatencies(latencies), m.failureList
 }
 
 func (m *responseMetricImpl) dumpLatencies() []float64 {

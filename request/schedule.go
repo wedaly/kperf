@@ -16,6 +16,8 @@ import (
 
 const defaultTimeout = 60 * time.Second
 
+var m sync.Mutex
+
 // Schedule files requests to apiserver based on LoadProfileSpec.
 func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.Interface) (*types.ResponseStats, error) {
 	ctx, cancel := context.WithCancel(ctx)
@@ -64,8 +66,11 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 						// we don't need that unmarshal object.
 						_, err = io.Copy(io.Discard, respBody)
 					}
+
 					if err != nil {
+						m.Lock()
 						respMetric.ObserveFailure(err)
+						m.Unlock()
 					}
 				}()
 			}
@@ -80,10 +85,9 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 
 	totalDuration := time.Since(start)
 
-	_, percentileLatencies, failures, failureList := respMetric.Gather()
+	_, percentileLatencies, failureList := respMetric.Gather()
 	return &types.ResponseStats{
 		Total:               spec.Total,
-		Failures:            failures,
 		FailureList:         failureList,
 		Duration:            totalDuration,
 		PercentileLatencies: percentileLatencies,

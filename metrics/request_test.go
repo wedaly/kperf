@@ -38,7 +38,7 @@ func TestResponseMetric(t *testing.T) {
 		c.ObserveLatency(float64(i))
 	}
 
-	_, res, _, _ := c.Gather()
+	_, res, _ := c.Gather()
 	assert.Equal(t, float64(1), res[0])
 	assert.Equal(t, float64(50), res[50])
 	assert.Equal(t, float64(90), res[90])
