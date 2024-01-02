@@ -3,6 +3,7 @@ package request
 import (
 	"context"
 	"io"
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -64,7 +65,11 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 						defer respBody.Close()
 						// NOTE: It's to reduce memory usage because
 						// we don't need that unmarshal object.
-						_, err = io.Copy(io.Discard, respBody)
+						bytes, err := io.Copy(io.Discard, respBody)
+						if err != nil {
+							log.Fatal("error completing io.Copy()", err)
+						}
+						respMetric.ObserveReceivedBytes(bytes)
 					}
 
 					if err != nil {

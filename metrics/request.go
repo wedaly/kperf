@@ -13,14 +13,17 @@ type ResponseMetric interface {
 	ObserveLatency(seconds float64)
 	// ObserveFailure observes failure response.
 	ObserveFailure(err error)
+	// ObserveReceivedBytes observes the bytes read from apiserver.
+	ObserveReceivedBytes(bytes int64)
 	// Gather returns the summary.
 	Gather() (latencies []float64, percentileLatencies map[float64]float64, failureList []error)
 }
 
 type responseMetricImpl struct {
-	mu          sync.Mutex
-	failureList []error
-	latencies   *list.List
+	mu            sync.Mutex
+	failureList   []error
+	latencies     *list.List
+	receivedBytes int64
 }
 
 func NewResponseMetric() ResponseMetric {
@@ -43,6 +46,13 @@ func (m *responseMetricImpl) ObserveFailure(err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.failureList = append(m.failureList, err)
+}
+
+// ObserveReceivedBytes implements ResponseMetric.
+func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.receivedBytes += bytes
 }
 
 // Gather implements ResponseMetric.
