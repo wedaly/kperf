@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"container/list"
-	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -54,7 +53,6 @@ func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.receivedBytes += bytes
-	fmt.Println("received bytes: ", m.receivedBytes)
 }
 
 // Gather implements ResponseMetric.

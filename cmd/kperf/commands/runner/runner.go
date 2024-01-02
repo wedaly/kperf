@@ -3,8 +3,11 @@ package runner
 import (
 	"context"
 	"fmt"
+	"log"
+	"math"
 	"os"
 	"sort"
+	"strconv"
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/request"
@@ -53,6 +56,10 @@ var runCommand = cli.Command{
 			Name:  "user-agent",
 			Usage: "User Agent",
 		},
+		cli.StringFlag{
+			Name:  "result",
+			Usage: "Path to the file which stores results",
+		},
 	},
 	Action: func(cliCtx *cli.Context) error {
 		profileCfg, err := loadConfig(cliCtx)
@@ -62,6 +69,7 @@ var runCommand = cli.Command{
 
 		kubeCfgPath := cliCtx.String("kubeconfig")
 		userAgent := cliCtx.String("user-agent")
+		outputFile := cliCtx.String("result")
 
 		conns := profileCfg.Spec.Conns
 		rate := profileCfg.Spec.Rate
@@ -74,7 +82,13 @@ var runCommand = cli.Command{
 		if err != nil {
 			return err
 		}
-		printResponseStats(stats)
+
+		if outputFile != "" {
+			writeToFile(stats, outputFile)
+		} else {
+			printResponseStats(stats)
+		}
+
 		return nil
 	},
 }
@@ -133,5 +147,57 @@ func printResponseStats(stats *types.ResponseStats) {
 
 	for _, q := range keys {
 		fmt.Printf("    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
+	}
+}
+
+func writeToFile(stats *types.ResponseStats, outputFile string) {
+
+	f, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// remember to close the file
+	defer f.Close()
+
+	//write Total requests
+	f.WriteString("Response Stat: " + strconv.Itoa(stats.Total) + "\n")
+	_, err = f.WriteString("  Total: " + strconv.Itoa(stats.Total) + "\n")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString("  Total Failures: " + strconv.Itoa(len(stats.FailureList)) + "\n")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString("  Observed Bytes: " + strconv.FormatInt(stats.TotalReceivedBytes, 10) + "\n")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString("  Duration: " + stats.Duration.String() + "\n")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	requestsPerSec := float64(stats.Total) / stats.Duration.Seconds()
+	roundedNumber := math.Round(requestsPerSec*100) / 100
+	_, err = f.WriteString("  Requests/sec: " + strconv.FormatFloat(roundedNumber, 'f', -1, 64) + "\n")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	f.WriteString("  Latency Distribution:\n")
+	keys := make([]float64, 0, len(stats.PercentileLatencies))
+	for q := range stats.PercentileLatencies {
+		keys = append(keys, q)
+	}
+
+	sort.Float64s(keys)
+
+	for _, q := range keys {
+		str := fmt.Sprintf("    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
+		f.WriteString(str)
 	}
 }

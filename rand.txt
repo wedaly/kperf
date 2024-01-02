@@ -1,0 +1,13 @@
+Response Stat: 10
+  Total: 10
+  Total Failures: 0
+  Observed Bytes: 509240
+  Duration: 20.475404ms
+  Requests/sec: 488.39
+  Latency Distribution:
+    [0.00] 0.012s
+    [0.50] 0.019s
+    [0.90] 0.020s
+    [0.95] 0.020s
+    [0.99] 0.020s
+    [1.00] 0.020s
