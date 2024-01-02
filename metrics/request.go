@@ -39,6 +39,8 @@ func (m *responseMetricImpl) ObserveLatency(seconds float64) {
 
 // ObserveFailure implements ResponseMetric.
 func (m *responseMetricImpl) ObserveFailure(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.failureList = append(m.failureList, err)
 }
 

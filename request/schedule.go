@@ -68,9 +68,7 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 					}
 
 					if err != nil {
-						m.Lock()
 						respMetric.ObserveFailure(err)
-						m.Unlock()
 					}
 				}()
 			}
