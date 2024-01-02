@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"container/list"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -16,7 +17,7 @@ type ResponseMetric interface {
 	// ObserveReceivedBytes observes the bytes read from apiserver.
 	ObserveReceivedBytes(bytes int64)
 	// Gather returns the summary.
-	Gather() (latencies []float64, percentileLatencies map[float64]float64, failureList []error)
+	Gather() (latencies []float64, percentileLatencies map[float64]float64, failureList []error, bytes int64)
 }
 
 type responseMetricImpl struct {
@@ -53,12 +54,13 @@ func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.receivedBytes += bytes
+	fmt.Println("received bytes: ", m.receivedBytes)
 }
 
 // Gather implements ResponseMetric.
-func (m *responseMetricImpl) Gather() ([]float64, map[float64]float64, []error) {
+func (m *responseMetricImpl) Gather() ([]float64, map[float64]float64, []error, int64) {
 	latencies := m.dumpLatencies()
-	return latencies, buildPercentileLatencies(latencies), m.failureList
+	return latencies, buildPercentileLatencies(latencies), m.failureList, m.receivedBytes
 }
 
 func (m *responseMetricImpl) dumpLatencies() []float64 {
