@@ -24,9 +24,10 @@ type responseMetricImpl struct {
 }
 
 func NewResponseMetric() ResponseMetric {
+	errList := make([]error, 0, 1024)
 	return &responseMetricImpl{
 		latencies:   list.New(),
-		failureList: []error{},
+		failureList: errList,
 	}
 }
 
