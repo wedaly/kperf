@@ -3,7 +3,6 @@ package request
 import (
 	"context"
 	"io"
-	"log"
 	"math"
 	"sync"
 	"time"
@@ -60,15 +59,11 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 						respMetric.ObserveLatency(time.Since(start).Seconds())
 					}()
 
+					var bytes int64
 					respBody, err := req.Stream(context.Background())
 					if err == nil {
 						defer respBody.Close()
-						// NOTE: It's to reduce memory usage because
-						// we don't need that unmarshal object.
-						bytes, err := io.Copy(io.Discard, respBody)
-						if err != nil {
-							log.Fatal("error completing io.Copy()", err)
-						}
+						bytes, err = io.Copy(io.Discard, respBody)
 						respMetric.ObserveReceivedBytes(bytes)
 					}
 

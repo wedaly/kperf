@@ -83,11 +83,16 @@ var runCommand = cli.Command{
 			return err
 		}
 
-		if outputFile != "" {
-			writeToFile(stats, outputFile)
+		var f *os.File
+		if outputFile == "" {
+			f = os.Stdout
 		} else {
-			printResponseStats(stats)
+			f, err = os.Create(outputFile)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
+		writeToFile(f, stats)
 
 		return nil
 	},
@@ -125,43 +130,14 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	return &profileCfg, nil
 }
 
-// printResponseStats prints ResponseStats into stdout.
-func printResponseStats(stats *types.ResponseStats) {
-	fmt.Println("Response stat:")
-	fmt.Printf("  Total: %v\n", stats.Total)
-	fmt.Printf("  Total Failures: %v\n", len(stats.FailureList))
-	for _, v := range stats.FailureList {
-		fmt.Printf("  Failure: %v\n", v)
-	}
-	fmt.Printf("  Observed Bytes: %v\n", stats.TotalReceivedBytes)
-	fmt.Printf("  Duration: %v\n", stats.Duration)
-	fmt.Printf("  Requests/sec: %.2f\n", float64(stats.Total)/stats.Duration.Seconds())
+func writeToFile(f *os.File, stats *types.ResponseStats) {
 
-	fmt.Println("  Latency Distribution:")
-	keys := make([]float64, 0, len(stats.PercentileLatencies))
-	for q := range stats.PercentileLatencies {
-		keys = append(keys, q)
-	}
-
-	sort.Float64s(keys)
-
-	for _, q := range keys {
-		fmt.Printf("    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
-	}
-}
-
-func writeToFile(stats *types.ResponseStats, outputFile string) {
-
-	f, err := os.Create(outputFile)
-	if err != nil {
-		log.Fatal(err)
-	}
 	// remember to close the file
 	defer f.Close()
 
 	//write Total requests
-	f.WriteString("Response Stat: " + strconv.Itoa(stats.Total) + "\n")
-	_, err = f.WriteString("  Total: " + strconv.Itoa(stats.Total) + "\n")
+	f.WriteString("Response Stat: \n")
+	_, err := f.WriteString("  Total: " + strconv.Itoa(stats.Total) + "\n")
 	if err != nil {
 		log.Fatal(err)
 	}

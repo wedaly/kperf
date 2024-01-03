@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 // ResponseMetric is a measurement related to http response.
@@ -52,7 +53,7 @@ func (m *responseMetricImpl) ObserveFailure(err error) {
 func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.receivedBytes += bytes
+	atomic.AddInt64(&m.receivedBytes, bytes)
 }
 
 // Gather implements ResponseMetric.
