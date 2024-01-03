@@ -64,8 +64,9 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 						// we don't need that unmarshal object.
 						_, err = io.Copy(io.Discard, respBody)
 					}
+
 					if err != nil {
-						respMetric.ObserveFailure()
+						respMetric.ObserveFailure(err)
 					}
 				}()
 			}
@@ -80,10 +81,10 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 
 	totalDuration := time.Since(start)
 
-	_, percentileLatencies, failures := respMetric.Gather()
+	_, percentileLatencies, failureList := respMetric.Gather()
 	return &types.ResponseStats{
 		Total:               spec.Total,
-		Failures:            failures,
+		FailureList:         failureList,
 		Duration:            totalDuration,
 		PercentileLatencies: percentileLatencies,
 	}, nil
