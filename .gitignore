@@ -20,6 +20,3 @@ bin/
 
 # Go workspace file
 go.work
-
-temp/
-cmd/kperf/commands/virtualcluster

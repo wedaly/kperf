@@ -76,13 +76,12 @@ var runCommand = cli.Command{
 		userAgent := cliCtx.String("user-agent")
 
 		conns := profileCfg.Spec.Conns
-		client := profileCfg.Spec.Conns
 		rate := profileCfg.Spec.Rate
 		restClis, err := request.NewClients(kubeCfgPath, conns, userAgent, rate, contentType)
 		if err != nil {
 			return err
 		}
-		stats, err := request.Schedule(context.TODO(), client, &profileCfg.Spec, restClis)
+		stats, err := request.Schedule(context.TODO(), &profileCfg.Spec, restClis)
 
 		if err != nil {
 			return err
@@ -113,6 +112,9 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	}
 	if v := "conns"; cliCtx.IsSet(v) || profileCfg.Spec.Conns == 0 {
 		profileCfg.Spec.Conns = cliCtx.Int(v)
+	}
+	if v := "client"; cliCtx.IsSet(v) || profileCfg.Spec.Client == 0 {
+		profileCfg.Spec.Client = cliCtx.Int(v)
 	}
 	if v := "total"; cliCtx.IsSet(v) || profileCfg.Spec.Total == 0 {
 		profileCfg.Spec.Total = cliCtx.Int(v)
