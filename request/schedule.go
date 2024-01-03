@@ -16,8 +16,6 @@ import (
 
 const defaultTimeout = 60 * time.Second
 
-var m sync.Mutex
-
 // Schedule files requests to apiserver based on LoadProfileSpec.
 func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.Interface) (*types.ResponseStats, error) {
 	ctx, cancel := context.WithCancel(ctx)
