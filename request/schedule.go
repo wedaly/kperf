@@ -36,10 +36,11 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 	var wg sync.WaitGroup
 
 	respMetric := metrics.NewResponseMetric()
-	for _, cli := range restCli {
-		cli := cli
+	for i := 0; i < spec.Client; i++ {
+		// reuse connection if clients > conns
+		cli := restCli[i%len(restCli)]
 		wg.Add(1)
-		go func() {
+		go func(cli rest.Interface) {
 			defer wg.Done()
 
 			for builder := range reqBuilderCh {
@@ -70,7 +71,7 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 					}
 				}()
 			}
-		}()
+		}(cli)
 	}
 
 	start := time.Now()

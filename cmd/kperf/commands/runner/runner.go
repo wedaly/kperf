@@ -30,6 +30,11 @@ var runCommand = cli.Command{
 			Name:  "kubeconfig",
 			Usage: "Path to the kubeconfig file",
 		},
+		cli.IntFlag{
+			Name:  "client",
+			Usage: "Total number of HTTP clients",
+			Value: 1,
+		},
 		cli.StringFlag{
 			Name:     "config",
 			Usage:    "Path to the configuration file",
@@ -39,6 +44,11 @@ var runCommand = cli.Command{
 			Name:  "conns",
 			Usage: "Total number of connections. It can override corresponding value defined by --config",
 			Value: 1,
+		},
+		cli.StringFlag{
+			Name:  "content-type",
+			Usage: "Content type (json or protobuf)",
+			Value: "json",
 		},
 		cli.IntFlag{
 			Name:  "rate",
@@ -60,17 +70,19 @@ var runCommand = cli.Command{
 			return err
 		}
 
+		// Get the content type from the command-line flag
+		contentType := cliCtx.String("content-type")
 		kubeCfgPath := cliCtx.String("kubeconfig")
 		userAgent := cliCtx.String("user-agent")
 
 		conns := profileCfg.Spec.Conns
 		rate := profileCfg.Spec.Rate
-		restClis, err := request.NewClients(kubeCfgPath, conns, userAgent, rate)
+		restClis, err := request.NewClients(kubeCfgPath, conns, userAgent, rate, contentType)
 		if err != nil {
 			return err
 		}
-
 		stats, err := request.Schedule(context.TODO(), &profileCfg.Spec, restClis)
+
 		if err != nil {
 			return err
 		}
@@ -100,6 +112,9 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	}
 	if v := "conns"; cliCtx.IsSet(v) || profileCfg.Spec.Conns == 0 {
 		profileCfg.Spec.Conns = cliCtx.Int(v)
+	}
+	if v := "client"; cliCtx.IsSet(v) || profileCfg.Spec.Client == 0 {
+		profileCfg.Spec.Client = cliCtx.Int(v)
 	}
 	if v := "total"; cliCtx.IsSet(v) || profileCfg.Spec.Total == 0 {
 		profileCfg.Spec.Total = cliCtx.Int(v)
