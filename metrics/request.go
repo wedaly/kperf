@@ -51,15 +51,13 @@ func (m *responseMetricImpl) ObserveFailure(err error) {
 
 // ObserveReceivedBytes implements ResponseMetric.
 func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	atomic.AddInt64(&m.receivedBytes, bytes)
 }
 
 // Gather implements ResponseMetric.
 func (m *responseMetricImpl) Gather() ([]float64, map[float64]float64, []error, int64) {
 	latencies := m.dumpLatencies()
-	return latencies, buildPercentileLatencies(latencies), m.failureList, m.receivedBytes
+	return latencies, buildPercentileLatencies(latencies), m.failureList, atomic.LoadInt64(&m.receivedBytes)
 }
 
 func (m *responseMetricImpl) dumpLatencies() []float64 {

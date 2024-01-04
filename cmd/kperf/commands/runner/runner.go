@@ -83,17 +83,22 @@ var runCommand = cli.Command{
 			return err
 		}
 
-		var f *os.File
-		if outputFile == "" {
-			f = os.Stdout
-		} else {
-			f, err = os.Create(outputFile)
+		var fileDir string = "result" //change directory to store response stats if needed
+
+		var f *os.File = os.Stdout
+		if outputFile != "" {
+			err = os.MkdirAll(fileDir, 0750)
 			if err != nil {
 				log.Fatal(err)
 			}
+			filePath := fmt.Sprintf("%s/%s", fileDir, outputFile)
+			f, err = os.Create(filePath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
 		}
-		writeToFile(f, stats)
-
+		printResponseStats(f, stats)
 		return nil
 	},
 }
@@ -130,41 +135,23 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	return &profileCfg, nil
 }
 
-func writeToFile(f *os.File, stats *types.ResponseStats) {
+func printResponseStats(f *os.File, stats *types.ResponseStats) {
+	fmt.Fprintf(f, "Response Stat: \n")
 
-	// remember to close the file
-	defer f.Close()
+	fmt.Fprintf(f, "  Total: "+strconv.Itoa(stats.Total)+"\n")
 
-	//write Total requests
-	f.WriteString("Response Stat: \n")
-	_, err := f.WriteString("  Total: " + strconv.Itoa(stats.Total) + "\n")
-	if err != nil {
-		log.Fatal(err)
-	}
+	fmt.Fprintf(f, "  Total Failures: "+strconv.Itoa(len(stats.FailureList))+"\n")
 
-	_, err = f.WriteString("  Total Failures: " + strconv.Itoa(len(stats.FailureList)) + "\n")
-	if err != nil {
-		log.Fatal(err)
-	}
+	fmt.Fprintf(f, "  Observed Bytes: "+strconv.FormatInt(stats.TotalReceivedBytes, 10)+"\n")
 
-	_, err = f.WriteString("  Observed Bytes: " + strconv.FormatInt(stats.TotalReceivedBytes, 10) + "\n")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = f.WriteString("  Duration: " + stats.Duration.String() + "\n")
-	if err != nil {
-		log.Fatal(err)
-	}
+	fmt.Fprintf(f, "  Duration: "+stats.Duration.String()+"\n")
 
 	requestsPerSec := float64(stats.Total) / stats.Duration.Seconds()
-	roundedNumber := math.Round(requestsPerSec*100) / 100
-	_, err = f.WriteString("  Requests/sec: " + strconv.FormatFloat(roundedNumber, 'f', -1, 64) + "\n")
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	f.WriteString("  Latency Distribution:\n")
+	roundedNumber := math.Round(requestsPerSec*100) / 100
+	fmt.Fprintf(f, "  Requests/sec: "+strconv.FormatFloat(roundedNumber, 'f', -1, 64)+"\n")
+
+	fmt.Fprintf(f, "  Latency Distribution:\n")
 	keys := make([]float64, 0, len(stats.PercentileLatencies))
 	for q := range stats.PercentileLatencies {
 		keys = append(keys, q)
@@ -174,6 +161,6 @@ func writeToFile(f *os.File, stats *types.ResponseStats) {
 
 	for _, q := range keys {
 		str := fmt.Sprintf("    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
-		f.WriteString(str)
+		fmt.Fprint(f, str)
 	}
 }

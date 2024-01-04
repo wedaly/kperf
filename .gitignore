@@ -21,8 +21,8 @@ bin/
 # Go workspace file
 go.work
 
-#output file
-*.txt
+#output file directory
+result/
 
 #tmp folder which contains .yaml files
 tmp/
