@@ -13,6 +13,7 @@ import (
 //
 // FIXME(weifu):
 //
+// 1. Is it possible to build one http2 client with multiple connections?
 // 2. How to monitor HTTP2 GOAWAY frame?
 func NewClients(kubeCfgPath string, ConnsNum int, userAgent string, qps int, contentType string) ([]rest.Interface, error) {
 	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeCfgPath)
