@@ -58,12 +58,12 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 						respMetric.ObserveLatency(time.Since(start).Seconds())
 					}()
 
+					var bytes int64
 					respBody, err := req.Stream(context.Background())
 					if err == nil {
 						defer respBody.Close()
-						// NOTE: It's to reduce memory usage because
-						// we don't need that unmarshal object.
-						_, err = io.Copy(io.Discard, respBody)
+						bytes, err = io.Copy(io.Discard, respBody)
+						respMetric.ObserveReceivedBytes(bytes)
 					}
 
 					if err != nil {
@@ -81,12 +81,12 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 	wg.Wait()
 
 	totalDuration := time.Since(start)
-
-	_, percentileLatencies, failureList := respMetric.Gather()
+	_, percentileLatencies, failureList, bytes := respMetric.Gather()
 	return &types.ResponseStats{
 		Total:               spec.Total,
 		FailureList:         failureList,
 		Duration:            totalDuration,
+		TotalReceivedBytes:  bytes,
 		PercentileLatencies: percentileLatencies,
 	}, nil
 }

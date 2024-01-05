@@ -21,5 +21,11 @@ bin/
 # Go workspace file
 go.work
 
+#output file directory
+result/
+
 #tmp folder which contains .yaml files
 tmp/
+
+#.txt files which contain response stats
+.txt
