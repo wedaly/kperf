@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"sort"
-	"strconv"
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/request"
@@ -69,7 +67,7 @@ var runCommand = cli.Command{
 
 		kubeCfgPath := cliCtx.String("kubeconfig")
 		userAgent := cliCtx.String("user-agent")
-		outputFile := cliCtx.String("result")
+		outputFilePath := cliCtx.String("result")
 
 		conns := profileCfg.Spec.Conns
 		rate := profileCfg.Spec.Rate
@@ -83,18 +81,15 @@ var runCommand = cli.Command{
 			return err
 		}
 
-		var fileDir string = "result" //change directory to store response stats if needed
-
 		var f *os.File = os.Stdout
-		if outputFile != "" {
-			err = os.MkdirAll(fileDir, 0750)
+		if outputFilePath != "" {
+			err := os.MkdirAll(outputFilePath, os.ModePerm)
 			if err != nil {
-				log.Fatal(err)
+				log.Default().Printf("failed to create directory %s: %v", outputFilePath, err)
 			}
-			filePath := fmt.Sprintf("%s/%s", fileDir, outputFile)
-			f, err = os.Create(filePath)
+			f, err = os.Create(outputFilePath)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			defer f.Close()
 		}
@@ -136,22 +131,20 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 }
 
 func printResponseStats(f *os.File, stats *types.ResponseStats) {
-	fmt.Fprintf(f, "Response Stat: \n")
+	fmt.Fprint(f, "Response Stat: \n")
+	fmt.Fprintf(f, "  Total: %v\n", stats.Total)
 
-	fmt.Fprintf(f, "  Total: "+strconv.Itoa(stats.Total)+"\n")
+	fmt.Fprintf(f, "  Total Failures: %d\n", len(stats.FailureList))
 
-	fmt.Fprintf(f, "  Total Failures: "+strconv.Itoa(len(stats.FailureList))+"\n")
+	fmt.Fprintf(f, "  Observed Bytes: %v\n", stats.TotalReceivedBytes)
 
-	fmt.Fprintf(f, "  Observed Bytes: "+strconv.FormatInt(stats.TotalReceivedBytes, 10)+"\n")
-
-	fmt.Fprintf(f, "  Duration: "+stats.Duration.String()+"\n")
+	fmt.Fprintf(f, "  Duration: %v\n", stats.Duration.String())
 
 	requestsPerSec := float64(stats.Total) / stats.Duration.Seconds()
 
-	roundedNumber := math.Round(requestsPerSec*100) / 100
-	fmt.Fprintf(f, "  Requests/sec: "+strconv.FormatFloat(roundedNumber, 'f', -1, 64)+"\n")
+	fmt.Fprintf(f, "  Requests/sec: %.2f\n", requestsPerSec)
 
-	fmt.Fprintf(f, "  Latency Distribution:\n")
+	fmt.Fprint(f, "  Latency Distribution:\n")
 	keys := make([]float64, 0, len(stats.PercentileLatencies))
 	for q := range stats.PercentileLatencies {
 		keys = append(keys, q)
@@ -160,7 +153,6 @@ func printResponseStats(f *os.File, stats *types.ResponseStats) {
 	sort.Float64s(keys)
 
 	for _, q := range keys {
-		str := fmt.Sprintf("    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
-		fmt.Fprint(f, str)
+		fmt.Fprintf(f, "    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
 	}
 }
