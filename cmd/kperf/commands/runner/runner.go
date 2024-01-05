@@ -3,8 +3,8 @@ package runner
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"github.com/Azure/kperf/api/types"
@@ -83,9 +83,9 @@ var runCommand = cli.Command{
 
 		var f *os.File = os.Stdout
 		if outputFilePath != "" {
-			err := os.MkdirAll(outputFilePath, os.ModePerm)
+			err := os.MkdirAll(filepath.Dir(outputFilePath), 0600)
 			if err != nil {
-				log.Default().Printf("failed to create directory %s: %v", outputFilePath, err)
+				return err
 			}
 			f, err = os.Create(outputFilePath)
 			if err != nil {
@@ -135,6 +135,10 @@ func printResponseStats(f *os.File, stats *types.ResponseStats) {
 	fmt.Fprintf(f, "  Total: %v\n", stats.Total)
 
 	fmt.Fprintf(f, "  Total Failures: %d\n", len(stats.FailureList))
+
+	for _, v := range stats.FailureList {
+		fmt.Fprintf(f, "	%v\n", v)
+	}
 
 	fmt.Fprintf(f, "  Observed Bytes: %v\n", stats.TotalReceivedBytes)
 

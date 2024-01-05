@@ -26,3 +26,6 @@ result/
 
 #tmp folder which contains .yaml files
 tmp/
+
+#.txt files which contain response stats
+.txt
