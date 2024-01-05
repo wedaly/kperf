@@ -95,10 +95,16 @@ var runCommand = cli.Command{
 
 		var f *os.File = os.Stdout
 		if outputFilePath != "" {
-			err := os.MkdirAll(filepath.Dir(outputFilePath), 0600)
-			if err != nil {
-				return err
+			outputFileDir := filepath.Dir(outputFilePath)
+
+			_, err = os.Stat(outputFileDir)
+			if err != nil && os.IsNotExist(err) {
+				err = os.MkdirAll(outputFileDir, 0750)
 			}
+			if err != nil {
+				return fmt.Errorf("failed to ensure output's dir %s: %w", outputFileDir, err)
+			}
+
 			f, err = os.Create(outputFilePath)
 			if err != nil {
 				return err
