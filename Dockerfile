@@ -9,7 +9,10 @@ RUN mkdir -p /output
 WORKDIR /kperf-build
 RUN --mount=source=./,target=/kperf-build,rw make build && PREFIX=/output make install
 
-FROM gcr.io/distroless/static-debian12:nonroot AS release-stage
+# TODO: We should consider to implement our own curl to upload data
+FROM ubuntu:22.04 AS release-stage
+
+RUN apt update -y && apt install curl -y
 
 WORKDIR /
 

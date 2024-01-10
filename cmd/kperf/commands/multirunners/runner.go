@@ -71,10 +71,17 @@ var Command = cli.Command{
 	Name:      "multirunners",
 	ShortName: "mrunners",
 	Usage:     "packages runner as job and deploy runners into kubernetes",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "kubeconfig",
+			Usage: "Path to the kubeconfig file",
+		},
+	},
 	Subcommands: []cli.Command{
 		runCommand,
 		waitCommand,
 		resultCommand,
+		serverCommand,
 	},
 }
 
