@@ -292,6 +292,10 @@ data:
             operator: 'In'
             values:
               - 'True'
+          - key: '.metadata.ownerReferences.[].kind'
+            operator: 'In'
+            values:
+              - 'Job'
       weight: 1
       delay:
         durationMilliseconds: 1000
