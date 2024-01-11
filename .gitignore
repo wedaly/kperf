@@ -28,4 +28,4 @@ result/
 tmp/
 
 #.txt files which contain response stats
-.txt
+*.txt

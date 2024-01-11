@@ -2,10 +2,10 @@ package metrics
 
 import (
 	"container/list"
-	"math"
-	"sort"
 	"sync"
 	"sync/atomic"
+
+	"github.com/Azure/kperf/api/types"
 )
 
 // ResponseMetric is a measurement related to http response.
@@ -17,7 +17,7 @@ type ResponseMetric interface {
 	// ObserveReceivedBytes observes the bytes read from apiserver.
 	ObserveReceivedBytes(bytes int64)
 	// Gather returns the summary.
-	Gather() (latencies []float64, percentileLatencies map[float64]float64, failureList []error, bytes int64)
+	Gather() types.ResponseStats
 }
 
 type responseMetricImpl struct {
@@ -55,9 +55,13 @@ func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
 }
 
 // Gather implements ResponseMetric.
-func (m *responseMetricImpl) Gather() ([]float64, map[float64]float64, []error, int64) {
+func (m *responseMetricImpl) Gather() types.ResponseStats {
 	latencies := m.dumpLatencies()
-	return latencies, buildPercentileLatencies(latencies), m.failureList, atomic.LoadInt64(&m.receivedBytes)
+	return types.ResponseStats{
+		FailureList:        m.failureList,
+		Latencies:          latencies,
+		TotalReceivedBytes: atomic.LoadInt64(&m.receivedBytes),
+	}
 }
 
 func (m *responseMetricImpl) dumpLatencies() []float64 {
@@ -66,27 +70,6 @@ func (m *responseMetricImpl) dumpLatencies() []float64 {
 	res := make([]float64, 0, m.latencies.Len())
 	for e := m.latencies.Front(); e != nil; e = e.Next() {
 		res = append(res, e.Value.(float64))
-	}
-	return res
-}
-
-var percentiles = []float64{0, 50, 90, 95, 99, 100}
-
-func buildPercentileLatencies(latencies []float64) map[float64]float64 {
-	if len(latencies) == 0 {
-		return nil
-	}
-
-	res := make(map[float64]float64, len(percentiles))
-
-	n := len(latencies)
-	sort.Float64s(latencies)
-	for _, p := range percentiles {
-		idx := int(math.Ceil(float64(n) * p / 100))
-		if idx > 0 {
-			idx--
-		}
-		res[p] = latencies[idx]
 	}
 	return res
 }

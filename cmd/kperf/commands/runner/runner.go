@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/request"
@@ -111,6 +110,8 @@ var runCommand = cli.Command{
 			}
 			defer f.Close()
 		}
+
+		//TODO: add printResponseStats for .json format
 		printResponseStats(f, stats)
 		return nil
 	},
@@ -151,33 +152,7 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	return &profileCfg, nil
 }
 
-func printResponseStats(f *os.File, stats *types.ResponseStats) {
-	fmt.Fprint(f, "Response Stat: \n")
-	fmt.Fprintf(f, "  Total: %v\n", stats.Total)
-
-	fmt.Fprintf(f, "  Total Failures: %d\n", len(stats.FailureList))
-
-	for _, v := range stats.FailureList {
-		fmt.Fprintf(f, "	%v\n", v)
-	}
-
-	fmt.Fprintf(f, "  Observed Bytes: %v\n", stats.TotalReceivedBytes)
-
-	fmt.Fprintf(f, "  Duration: %v\n", stats.Duration.String())
-
-	requestsPerSec := float64(stats.Total) / stats.Duration.Seconds()
-
-	fmt.Fprintf(f, "  Requests/sec: %.2f\n", requestsPerSec)
-
-	fmt.Fprint(f, "  Latency Distribution:\n")
-	keys := make([]float64, 0, len(stats.PercentileLatencies))
-	for q := range stats.PercentileLatencies {
-		keys = append(keys, q)
-	}
-
-	sort.Float64s(keys)
-
-	for _, q := range keys {
-		fmt.Fprintf(f, "    [%.2f] %.3fs\n", q/100.0, stats.PercentileLatencies[q])
-	}
+// TODO: Complete this function
+func printResponseStats(f *os.File, stats *request.Result) {
+	fmt.Fprintf(f, "Response Stat: %v\n", stats)
 }
