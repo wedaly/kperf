@@ -19,7 +19,7 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 ALWAYS:
 
 bin/%: cmd/% ALWAYS
-	@GO_ENABLED=0 go build -o $@ ${GO_BUILDTAGS} ./$<
+	@CGO_ENABLED=0 go build -o $@ ${GO_BUILDTAGS} ./$<
 
 build: $(BINARIES) ## build binaries
 	@echo "$@"
