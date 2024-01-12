@@ -2,15 +2,18 @@ package runner
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/request"
 
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
+	"k8s.io/klog/v2"
 )
 
 // Command represents runner subcommand.
@@ -67,8 +70,26 @@ var runCommand = cli.Command{
 			Name:  "result",
 			Usage: "Path to the file which stores results",
 		},
+		cli.StringFlag{
+			Name:  "v",
+			Usage: "log level for V logs",
+			Value: "0",
+		},
 	},
 	Action: func(cliCtx *cli.Context) error {
+		// initialize klog
+		klog.InitFlags(nil)
+
+		vFlag, err := strconv.Atoi(cliCtx.String("v"))
+		if err != nil || vFlag < 0 {
+			return fmt.Errorf("invalid value \"%v\" for flag -v: value must be a non-negative integer", cliCtx.String("v"))
+		}
+		if err := flag.Set("v", strconv.Itoa(cliCtx.Int("v"))); err != nil {
+			return fmt.Errorf("failed to set log level: %w", err)
+		}
+		defer klog.Flush()
+		flag.Parse()
+
 		profileCfg, err := loadConfig(cliCtx)
 		if err != nil {
 			return err
