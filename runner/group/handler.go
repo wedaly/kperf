@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
@@ -34,7 +35,8 @@ type Handler struct {
 	name      string
 	namespace string
 
-	spec *types.RunnerGroupSpec
+	spec     *types.RunnerGroupSpec
+	ownerRef *metav1.OwnerReference
 
 	// FIXME(weifu): should we migrate this field into RunnerGroupSpec?
 	imageRef string
@@ -49,10 +51,16 @@ func NewHandler(
 	spec *types.RunnerGroupSpec,
 	imageRef string,
 ) (*Handler, error) {
+	ownRef, err := buildOwnerReference(spec.OwnerReference)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Handler{
 		name:      name,
 		namespace: namespace,
 		spec:      spec,
+		ownerRef:  ownRef,
 		imageRef:  imageRef,
 		clientset: clientset,
 	}, nil
@@ -107,6 +115,9 @@ func (h *Handler) uploadLoadProfileAsConfigMap(ctx context.Context) error {
 		Data: map[string]string{
 			configMapDataKeyLoadProfile: string(raw),
 		},
+	}
+	if h.ownerRef != nil {
+		cm.OwnerReferences = append(cm.OwnerReferences, *h.ownerRef)
 	}
 	_, err = cli.Create(ctx, cm, metav1.CreateOptions{})
 	return err
@@ -322,6 +333,10 @@ func (h *Handler) buildBatchJobObject(uploadURL string) *batchv1.Job {
 		},
 	}
 
+	if h.ownerRef != nil {
+		job.OwnerReferences = append(job.OwnerReferences, *h.ownerRef)
+	}
+
 	job.Spec.Template.Spec = corev1.PodSpec{
 		Affinity: &corev1.Affinity{},
 		Containers: []corev1.Container{
@@ -422,6 +437,25 @@ func (h *Handler) buildBatchJobObject(uploadURL string) *batchv1.Job {
 	}
 
 	return job
+}
+
+func buildOwnerReference(ref *string) (*metav1.OwnerReference, error) {
+	if ref == nil {
+		return nil, nil
+	}
+
+	tokens := strings.SplitN(*ref, ":", 4)
+	if len(tokens) != 4 {
+		return nil, fmt.Errorf("%s own reference is not apiVersion:kind:name:uid format", *ref)
+	}
+
+	return &metav1.OwnerReference{
+		APIVersion: tokens[0],
+		Kind:       tokens[1],
+		Name:       tokens[2],
+		UID:        apitypes.UID(tokens[3]),
+		Controller: toPtr(true),
+	}, nil
 }
 
 func jobFinished(job *batchv1.Job) bool {

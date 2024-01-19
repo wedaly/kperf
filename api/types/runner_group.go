@@ -19,4 +19,8 @@ type RunnerGroupSpec struct {
 	NodeAffinity map[string][]string `json:"nodeAffinity,omitempty" yaml:"nodeAffinity"`
 	// ServiceAccount is the name of the ServiceAccount to use to run runners.
 	ServiceAccount *string `json:"serviceAccount,omitempty" yaml:"serviceAccount"`
+	// OwnerReference is to mark the runner group depending on this object.
+	//
+	// FORMAT: APIVersion:Kind:Name:UID
+	OwnerReference *string `json:"ownerReference,omitempty" yaml:"ownerReference"`
 }
