@@ -30,7 +30,7 @@ func renderErrorResponse(w http.ResponseWriter, code int, err error) {
 	data, _ := json.Marshal(types.HTTPError{
 		Error: err.Error(),
 	})
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 // buildNetListeners returns slice of net.Listeners.

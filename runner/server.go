@@ -64,6 +64,7 @@ func (s *Server) Run() error {
 		wg.Add(1)
 		go func(l net.Listener) {
 			defer wg.Done()
+			//nolint:gosec
 			errCh <- http.Serve(l, r)
 		}(lis)
 	}
@@ -78,7 +79,7 @@ func (s *Server) Run() error {
 }
 
 // listRunnerGroupsHandler lists all the runner groups.
-func (s *Server) listRunnerGroupsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) listRunnerGroupsHandler(w http.ResponseWriter, _ *http.Request) {
 	res := make([]*types.RunnerGroup, 0, len(s.groups))
 	for _, g := range s.groups {
 		res = append(res, g.Info())
@@ -86,7 +87,7 @@ func (s *Server) listRunnerGroupsHandler(w http.ResponseWriter, r *http.Request)
 
 	data, _ := json.Marshal(res)
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 // getRunnerGroupsSummary returns summary report.
@@ -112,7 +113,7 @@ func (s *Server) getRunnerGroupsSummary(w http.ResponseWriter, r *http.Request) 
 
 	data, _ := json.Marshal(s.report)
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 // postRunnerGroupsRunnerResult receives summary result from runner.
