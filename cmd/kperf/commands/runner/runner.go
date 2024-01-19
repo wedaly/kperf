@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/Azure/kperf/api/types"
+	"github.com/Azure/kperf/metrics"
 	"github.com/Azure/kperf/request"
 
 	"github.com/urfave/cli"
@@ -183,13 +184,15 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	return &profileCfg, nil
 }
 
+// printResponseStats prints types.RunnerMetricReport into underlying file.
 func printResponseStats(f *os.File, rawDataFlagIncluded bool, stats *request.Result) error {
 	output := types.RunnerMetricReport{
-		Total:              stats.Total,
-		FailureList:        stats.FailureList,
-		Duration:           stats.Duration,
-		Latencies:          stats.Latencies,
-		TotalReceivedBytes: stats.TotalReceivedBytes,
+		Total:               stats.Total,
+		FailureList:         stats.FailureList,
+		Duration:            stats.Duration.String(),
+		Latencies:           stats.Latencies,
+		TotalReceivedBytes:  stats.TotalReceivedBytes,
+		PercentileLatencies: metrics.BuildPercentileLatencies(stats.Latencies),
 	}
 
 	encoder := json.NewEncoder(f)
@@ -203,7 +206,5 @@ func printResponseStats(f *os.File, rawDataFlagIncluded bool, stats *request.Res
 	if err != nil {
 		return fmt.Errorf("failed to encode json: %w", err)
 	}
-
 	return nil
-
 }
