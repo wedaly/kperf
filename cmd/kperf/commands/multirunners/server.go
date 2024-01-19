@@ -30,6 +30,10 @@ var serverCommand = cli.Command{
 			Usage:    "The runner's conainer image",
 			Required: true,
 		},
+		cli.StringFlag{
+			Name:  "runner-owner",
+			Usage: "The runners depend on this object (FORMAT: APIServer:Kind:Name:UID)",
+		},
 		cli.StringSliceFlag{
 			Name:     "address",
 			Usage:    "Address for the server",
@@ -79,11 +83,20 @@ func buildRunnerGroupHandlers(cliCtx *cli.Context, serverName string) ([]*runner
 	imgRef := cliCtx.String("runner-image")
 	namespace := cliCtx.String("namespace")
 
+	ownerRef := ""
+	if cliCtx.IsSet("runner-owner") {
+		ownerRef = cliCtx.String("runner-owner")
+	}
+
 	groups := make([]*runnergroup.Handler, 0, len(specURIs))
 	for idx, specURI := range specURIs {
 		spec, err := runnergroup.NewRunnerGroupSpecFromURI(clientset, specURI)
 		if err != nil {
 			return nil, err
+		}
+
+		if ownerRef != "" {
+			spec.OwnerReference = &ownerRef
 		}
 
 		groupName := fmt.Sprintf("%s-%d", serverName, idx)
