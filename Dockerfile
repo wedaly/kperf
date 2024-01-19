@@ -17,7 +17,4 @@ RUN apt update -y && apt install curl -y
 WORKDIR /
 
 COPY --from=build-stage /output/bin/kperf /kperf
-
-USER nonroot:nonroot
-
-ENTRYPOINT ["/kperf"]
+COPY scripts/run_runner.sh /run_runner.sh
