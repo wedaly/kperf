@@ -72,7 +72,7 @@ var runCommand = cli.Command{
 		},
 		cli.BoolFlag{
 			Name:  "raw-data",
-			Usage: "write ResponseStats to file in .json format",
+			Usage: "show raw letencies data in result",
 		},
 	},
 	Action: func(cliCtx *cli.Context) error {
@@ -86,7 +86,7 @@ var runCommand = cli.Command{
 		kubeCfgPath := cliCtx.String("kubeconfig")
 		userAgent := cliCtx.String("user-agent")
 		outputFilePath := cliCtx.String("result")
-		rawDataFlagIncluded := cliCtx.Bool("result")
+		rawDataFlagIncluded := cliCtx.Bool("raw-data")
 
 		conns := profileCfg.Spec.Conns
 		rate := profileCfg.Spec.Rate
