@@ -1,8 +1,6 @@
 package runnergroup
 
 import (
-	"fmt"
-
 	"github.com/urfave/cli"
 )
 
@@ -20,19 +18,7 @@ var Command = cli.Command{
 	Subcommands: []cli.Command{
 		runCommand,
 		deleteCommand,
-		waitCommand,
 		resultCommand,
 		serverCommand,
-	},
-}
-
-var waitCommand = cli.Command{
-	Name:  "wait",
-	Usage: "wait until jobs finish",
-	Flags: []cli.Flag{},
-	Action: func(cliCtx *cli.Context) error {
-		// 1. Check the progress tracker name
-		// 2. Wait for the jobs
-		return fmt.Errorf("wait - not implemented")
 	},
 }

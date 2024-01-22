@@ -8,36 +8,27 @@ import (
 	"net/http"
 
 	"github.com/Azure/kperf/api/types"
-	"github.com/Azure/kperf/portforward"
 )
 
 // GetRunnerGroupResult gets runner group's aggregated report.
-func GetRunnerGroupResult(_ context.Context, kubecfgPath string) (*types.RunnerGroupsReport, error) {
-	pf, err := portforward.NewPodPortForwarder(
-		kubecfgPath,
-		runnerGroupReleaseNamespace,
-		runnerGroupServerReleaseName,
-		runnerGroupServerPort,
-	)
+func GetRunnerGroupResult(ctx context.Context, kubecfgPath string, wait bool) (*types.RunnerGroupsReport, error) {
+	host, done, err := initPortForwardToServer(kubecfgPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init pod portforward: %w", err)
+		return nil, err
 	}
-	defer pf.Stop()
+	defer done()
 
-	if err = pf.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start pod port forward: %w", err)
+	targetURL := fmt.Sprintf("http://%s/v1/runnergroups/summary", host)
+	if wait {
+		targetURL += "?wait=true"
 	}
 
-	localPort, err := pf.GetLocalPort()
+	req, err := http.NewRequestWithContext(ctx, "GET", targetURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get local port: %w", err)
+		return nil, fmt.Errorf("failed to init GET request: %w", err)
 	}
 
-	targetURL := fmt.Sprintf("http://localhost:%d/v1/runnergroups/summary", localPort)
-
-	// FIXME(weifu): cleanup nolint
-	//nolint:gosec
-	resp, err := http.Get(targetURL)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to access %s by portforward: %w", targetURL, err)
 	}
