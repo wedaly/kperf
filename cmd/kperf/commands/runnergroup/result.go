@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/runner"
@@ -15,11 +16,30 @@ import (
 var resultCommand = cli.Command{
 	Name:  "result",
 	Usage: "show the runner groups' result",
-	Flags: []cli.Flag{},
+	Flags: []cli.Flag{
+		cli.DurationFlag{
+			Name:  "timeout",
+			Usage: "Timeout for waiting result. Only valid when --wait",
+			Value: time.Hour,
+		},
+		cli.BoolTFlag{
+			Name:  "wait",
+			Usage: "Wait until result is ready",
+		},
+	},
 	Action: func(cliCtx *cli.Context) error {
 		kubeCfgPath := cliCtx.GlobalString("kubeconfig")
+		wait := cliCtx.Bool("wait")
 
-		res, err := runner.GetRunnerGroupResult(context.Background(), kubeCfgPath)
+		ctx := context.Background()
+		to := cliCtx.Duration("timeout")
+		if to > 0 && wait {
+			tctx, tcancel := context.WithTimeout(ctx, to)
+			defer tcancel()
+			ctx = tctx
+		}
+
+		res, err := runner.GetRunnerGroupResult(ctx, kubeCfgPath, wait)
 		if err != nil {
 			return err
 		}

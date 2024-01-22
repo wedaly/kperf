@@ -11,7 +11,7 @@ import (
 )
 
 // GetRunnerGroupResult gets runner group's aggregated report.
-func GetRunnerGroupResult(_ context.Context, kubecfgPath string) (*types.RunnerGroupsReport, error) {
+func GetRunnerGroupResult(ctx context.Context, kubecfgPath string, wait bool) (*types.RunnerGroupsReport, error) {
 	host, done, err := initPortForwardToServer(kubecfgPath)
 	if err != nil {
 		return nil, err
@@ -19,10 +19,16 @@ func GetRunnerGroupResult(_ context.Context, kubecfgPath string) (*types.RunnerG
 	defer done()
 
 	targetURL := fmt.Sprintf("http://%s/v1/runnergroups/summary", host)
+	if wait {
+		targetURL += "?wait=true"
+	}
 
-	// FIXME(weifu): cleanup nolint
-	//nolint:gosec
-	resp, err := http.Get(targetURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", targetURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init GET request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to access %s by portforward: %w", targetURL, err)
 	}
