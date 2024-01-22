@@ -6,8 +6,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Azure/kperf/cmd/kperf/commands/multirunners"
 	"github.com/Azure/kperf/cmd/kperf/commands/runner"
+	"github.com/Azure/kperf/cmd/kperf/commands/runnergroup"
 	"github.com/Azure/kperf/cmd/kperf/commands/virtualcluster"
 
 	"github.com/urfave/cli"
@@ -21,7 +21,7 @@ func App() *cli.App {
 		// TODO: add more fields
 		Commands: []cli.Command{
 			runner.Command,
-			multirunners.Command,
+			runnergroup.Command,
 			virtualcluster.Command,
 		},
 		Flags: []cli.Flag{

@@ -1,4 +1,4 @@
-package multirunners
+package runnergroup
 
 import (
 	"context"
