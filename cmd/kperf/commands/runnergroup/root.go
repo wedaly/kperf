@@ -19,6 +19,7 @@ var Command = cli.Command{
 	},
 	Subcommands: []cli.Command{
 		runCommand,
+		deleteCommand,
 		waitCommand,
 		resultCommand,
 		serverCommand,
