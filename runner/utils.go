@@ -28,7 +28,7 @@ func renderErrorResponse(w http.ResponseWriter, code int, err error) {
 	w.WriteHeader(code)
 
 	data, _ := json.Marshal(types.HTTPError{
-		Error: err.Error(),
+		ErrorMessage: err.Error(),
 	})
 	_, _ = w.Write(data)
 }

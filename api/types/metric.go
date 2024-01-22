@@ -24,3 +24,7 @@ type RunnerMetricReport struct {
 	// PercentileLatencies represents the latency distribution in seconds.
 	PercentileLatencies [][2]float64 `json:"percentileLatencies,omitempty"`
 }
+
+// TODO(weifu): build brand new struct for RunnerGroupsReport to include more
+// information, like how many runner groups, service account and flow control.
+type RunnerGroupsReport = RunnerMetricReport
