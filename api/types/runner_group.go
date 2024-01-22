@@ -16,11 +16,11 @@ type RunnerGroupSpec struct {
 	Profile *LoadProfile `json:"loadProfile,omitempty" yaml:"loadProfile"`
 	// NodeAffinity defines how to deploy runners into dedicated nodes
 	// which have specific labels.
-	NodeAffinity map[string][]string `json:"nodeAffinity,omitempty" yaml:"nodeAffinity"`
+	NodeAffinity map[string][]string `json:"nodeAffinity,omitempty" yaml:"nodeAffinity,omitempty"`
 	// ServiceAccount is the name of the ServiceAccount to use to run runners.
-	ServiceAccount *string `json:"serviceAccount,omitempty" yaml:"serviceAccount"`
+	ServiceAccount *string `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	// OwnerReference is to mark the runner group depending on this object.
 	//
 	// FORMAT: APIVersion:Kind:Name:UID
-	OwnerReference *string `json:"ownerReference,omitempty" yaml:"ownerReference"`
+	OwnerReference *string `json:"ownerReference,omitempty" yaml:"ownerReference,omitempty"`
 }
