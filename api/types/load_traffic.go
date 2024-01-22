@@ -43,15 +43,15 @@ type WeightedRequest struct {
 	// Shares defines weight in the same group.
 	Shares int `json:"shares" yaml:"shares"`
 	// StaleList means this list request with zero resource version.
-	StaleList *RequestList `json:"staleList" yaml:"staleList"`
+	StaleList *RequestList `json:"staleList,omitempty" yaml:"staleList,omitempty"`
 	// QuorumList means this list request without kube-apiserver cache.
-	QuorumList *RequestList `json:"quorumList" yaml:"quorumList"`
+	QuorumList *RequestList `json:"quorumList,omitempty" yaml:"quorumList,omitempty"`
 	// StaleGet means this get request with zero resource version.
-	StaleGet *RequestGet `json:"staleGet" yaml:"staleGet"`
+	StaleGet *RequestGet `json:"staleGet,omitempty" yaml:"staleGet,omitempty"`
 	// QuorumGet means this get request without kube-apiserver cache.
-	QuorumGet *RequestGet `json:"quorumGet" yaml:"quorumGet"`
+	QuorumGet *RequestGet `json:"quorumGet,omitempty" yaml:"quorumGet,omitempty"`
 	// Put means this is mutating request.
-	Put *RequestPut `json:"put" yaml:"put"`
+	Put *RequestPut `json:"put,omitempty" yaml:"put,omitempty"`
 }
 
 // RequestGet defines GET request for target object.

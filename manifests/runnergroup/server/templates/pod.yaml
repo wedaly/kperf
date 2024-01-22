@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  containers:
+  - name: server
+    command:
+    - /kperf
+    - mrunners
+    - server
+    - --namespace
+    - $(POD_NAMESPACE)
+    - --runnergroup
+    - configmap://{{ .Values.name }}-init-spec?namespace={{ .Release.Namespace }}
+    - --runner-image
+    - {{ .Values.image }}
+    - --runner-owner
+    - v1:Pod:$(POD_NAME):$(POD_UID)
+    - --address
+    - $(POD_IP):8080
+    - --address
+    - localhost:8080
+    - --data
+    - /data
+    - $(POD_NAME)
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: POD_UID
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.uid
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    image: {{ .Values.image }}
+    imagePullPolicy: Always
+    volumeMounts:
+    - mountPath: /data
+      name: data
+  restartPolicy: Always
+  serviceAccount: {{ .Values.name }}
+  volumes:
+  - emptyDir:
+    name: data

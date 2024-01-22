@@ -85,17 +85,6 @@ var Command = cli.Command{
 	},
 }
 
-var runCommand = cli.Command{
-	Name:  "run",
-	Flags: []cli.Flag{},
-	Action: func(cliCtx *cli.Context) error {
-		// 1. Parse options
-		// 2. Deploy jobs for --runners
-		// 3. Wait
-		return fmt.Errorf("run - not implemented")
-	},
-}
-
 var waitCommand = cli.Command{
 	Name:  "wait",
 	Usage: "wait until jobs finish",
