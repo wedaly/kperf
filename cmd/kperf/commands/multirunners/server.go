@@ -21,8 +21,8 @@ var serverCommand = cli.Command{
 			Value: "default",
 		},
 		cli.StringSliceFlag{
-			Name:     "runners",
-			Usage:    "The runner spec's URI",
+			Name:     "runnergroup",
+			Usage:    "The runner group spec's URI",
 			Required: true,
 		},
 		cli.StringFlag{
@@ -79,7 +79,7 @@ func buildRunnerGroupHandlers(cliCtx *cli.Context, serverName string) ([]*runner
 		return nil, fmt.Errorf("failed to build kubernetes clientset: %w", err)
 	}
 
-	specURIs := cliCtx.StringSlice("runners")
+	specURIs := cliCtx.StringSlice("runnergroup")
 	imgRef := cliCtx.String("runner-image")
 	namespace := cliCtx.String("namespace")
 
