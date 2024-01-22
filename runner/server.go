@@ -55,6 +55,7 @@ func (s *Server) Run() error {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/runnergroups", s.listRunnerGroupsHandler).Methods("GET")
+	// NOTE: Please update ./runnergroup_result.go if endpoint has been changed.
 	r.HandleFunc("/v1/runnergroups/summary", s.getRunnerGroupsSummary).Methods("GET")
 	r.HandleFunc("/v1/runnergroups/{runner_name}/result", s.postRunnerGroupsRunnerResult).Methods("POST")
 
