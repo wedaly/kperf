@@ -13,7 +13,8 @@ import (
 )
 
 var serverCommand = cli.Command{
-	Name: "server",
+	Name:      "server",
+	ArgsUsage: "NAME",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "namespace",
@@ -32,7 +33,7 @@ var serverCommand = cli.Command{
 		},
 		cli.StringFlag{
 			Name:  "runner-owner",
-			Usage: "The runners depend on this object (FORMAT: APIServer:Kind:Name:UID)",
+			Usage: "The runners depend on this object (FORMAT: APIVersion:Kind:Name:UID)",
 		},
 		cli.StringSliceFlag{
 			Name:     "address",
