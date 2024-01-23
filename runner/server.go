@@ -54,6 +54,7 @@ func (s *Server) Run() error {
 	go s.waitForRunnerGroups()
 
 	r := mux.NewRouter()
+	// NOTE: Please update ./runnergroup_list.go if endpoint has been changed.
 	r.HandleFunc("/v1/runnergroups", s.listRunnerGroupsHandler).Methods("GET")
 	// NOTE: Please update ./runnergroup_result.go if endpoint has been changed.
 	r.HandleFunc("/v1/runnergroups/summary", s.getRunnerGroupsSummary).Methods("GET")
@@ -80,10 +81,12 @@ func (s *Server) Run() error {
 }
 
 // listRunnerGroupsHandler lists all the runner groups.
-func (s *Server) listRunnerGroupsHandler(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) listRunnerGroupsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	res := make([]*types.RunnerGroup, 0, len(s.groups))
 	for _, g := range s.groups {
-		res = append(res, g.Info())
+		res = append(res, g.Info(ctx))
 	}
 
 	data, _ := json.Marshal(res)

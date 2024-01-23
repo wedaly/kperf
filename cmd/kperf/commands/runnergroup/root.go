@@ -20,5 +20,6 @@ var Command = cli.Command{
 		deleteCommand,
 		resultCommand,
 		serverCommand,
+		statusCommand,
 	},
 }

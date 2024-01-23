@@ -67,7 +67,7 @@ func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *type
 
 		pods, err := g.Pods(context.TODO())
 		if err != nil {
-			klog.V(2).ErrorS(err, "failed to list runners", "runner-group", g.Info().Name)
+			klog.V(2).ErrorS(err, "failed to list runners", "runner-group", g.Name())
 			continue
 		}
 
