@@ -66,12 +66,40 @@ func NewHandler(
 	}, nil
 }
 
-// Info returns RunnerGroup object.
-func (h *Handler) Info() *types.RunnerGroup {
-	return &types.RunnerGroup{
+// Name returns RunnerGroup's name
+func (h *Handler) Name() string {
+	return h.name
+}
+
+// Info returns RunnerGroup information with status.
+func (h *Handler) Info(ctx context.Context) *types.RunnerGroup {
+	rg := &types.RunnerGroup{
 		Name: h.name,
 		Spec: h.spec,
+		Status: &types.RunnerGroupStatus{
+			State: types.RunnerGroupStatusStateUnknown,
+		},
 	}
+
+	cli := h.clientset.BatchV1().Jobs(h.namespace)
+	job, err := cli.Get(ctx, h.name, metav1.GetOptions{})
+	if err != nil {
+		klog.V(2).ErrorS(err, "failed to job for runner group", "job", h.name)
+		return rg
+	}
+
+	state := types.RunnerGroupStatusStateRunning
+	if jobFinished(job) {
+		state = types.RunnerGroupStatusStateFinished
+	} else if job.Status.StartTime == nil {
+		state = types.RunnerGroupStatusStateUnknown
+	}
+
+	rg.Status.State = state
+	rg.Status.StartTime = job.Status.StartTime
+	rg.Status.Succeeded = job.Status.Succeeded
+	rg.Status.Failed = job.Status.Failed
+	return rg
 }
 
 // Deploy deploys a group of runners.
