@@ -74,7 +74,17 @@ var nodepoolDelCommand = cli.Command{
 	ArgsUsage: "NAME",
 	Usage:     "Delete a virtual node pool",
 	Action: func(cliCtx *cli.Context) error {
-		return fmt.Errorf("nodepool delete - not implemented")
+		if cliCtx.NArg() != 1 {
+			return fmt.Errorf("required only one argument as nodepool name")
+		}
+		nodepoolName := strings.TrimSpace(cliCtx.Args().Get(0))
+		if len(nodepoolName) == 0 {
+			return fmt.Errorf("required non-empty nodepool name")
+		}
+
+		kubeCfgPath := cliCtx.String("kubeconfig")
+
+		return virtualcluster.DeleteNodepool(context.Background(), kubeCfgPath, nodepoolName)
 	},
 }
 
