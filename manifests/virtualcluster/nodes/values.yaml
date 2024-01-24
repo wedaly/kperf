@@ -1,6 +1,5 @@
 name: "vc-testing"
-controllerNodeSelectors: {}
-replicas: 0
 nodeLabels: {}
+replicas: 0
 cpu: 0
 memory: 0
