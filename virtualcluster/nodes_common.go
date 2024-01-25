@@ -11,9 +11,10 @@ import (
 
 var (
 	defaultNodepoolCfg = nodepoolConfig{
-		count:  10,
-		cpu:    8,
-		memory: 16, // GiB
+		count:   10,
+		cpu:     8,
+		memory:  16, // GiB
+		maxPods: 110,
 	}
 
 	// virtualnodeReleaseLabels is used to mark that helm chart release
@@ -53,6 +54,8 @@ type nodepoolConfig struct {
 	// memory represents a logical memory resource provided by virtual node.
 	// The unit is GiB.
 	memory int
+	// maxPods represents maximum Pods per node.
+	maxPods int
 	// labels is to be applied to each virtual node.
 	labels []string
 	// nodeSelectors forces virtual node's controller to nodes with that specific labels.
@@ -63,6 +66,10 @@ func (cfg *nodepoolConfig) validate() error {
 	if cfg.count <= 0 || cfg.cpu <= 0 || cfg.memory <= 0 {
 		return fmt.Errorf("invalid count=%d or cpu=%d or memory=%d",
 			cfg.count, cfg.cpu, cfg.memory)
+	}
+
+	if cfg.maxPods <= 0 {
+		return fmt.Errorf("required max pods > 0, but got %d", cfg.maxPods)
 	}
 
 	if cfg.name == "" {
@@ -107,6 +114,13 @@ func WithNodepoolMemoryOpt(memory int) NodepoolOpt {
 	}
 }
 
+// WithNodepoolMaxPodsOpt updates max pods.
+func WithNodepoolMaxPodsOpt(maxPods int) NodepoolOpt {
+	return func(cfg *nodepoolConfig) {
+		cfg.maxPods = maxPods
+	}
+}
+
 // WithNodepoolLabelsOpt updates node's labels.
 func WithNodepoolLabelsOpt(labels []string) NodepoolOpt {
 	return func(cfg *nodepoolConfig) {
@@ -126,13 +140,13 @@ func WithNodepoolNodeControllerAffinity(nodeSelectors map[string][]string) Nodep
 //
 // NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
 func (cfg *nodepoolConfig) toNodeHelmValuesAppliers() []helmcli.ValuesApplier {
-	res := make([]string, 0, 4)
+	res := make([]string, 0, 5)
 
 	res = append(res, fmt.Sprintf("name=%s", cfg.name))
 	res = append(res, fmt.Sprintf("cpu=%d", cfg.cpu))
 	res = append(res, fmt.Sprintf("memory=%d", cfg.memory))
 	res = append(res, fmt.Sprintf("replicas=%d", cfg.count))
-
+	res = append(res, fmt.Sprintf("maxPods=%d", cfg.maxPods))
 	return []helmcli.ValuesApplier{helmcli.StringPathValuesApplier(res...)}
 }
 
