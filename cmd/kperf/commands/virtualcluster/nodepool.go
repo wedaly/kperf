@@ -49,6 +49,11 @@ var nodepoolAddCommand = cli.Command{
 			Usage: "The allocatable Memory resource per node (GiB)",
 			Value: 16,
 		},
+		cli.IntFlag{
+			Name:  "max-pods",
+			Usage: "The maximum Pods per node",
+			Value: 110,
+		},
 		cli.StringSliceFlag{
 			Name:  "affinity",
 			Usage: "Deploy controllers to the nodes with a specific labels (FORMAT: KEY=VALUE[,VALUE])",
@@ -76,6 +81,7 @@ var nodepoolAddCommand = cli.Command{
 			virtualcluster.WithNodepoolCPUOpt(cliCtx.Int("cpu")),
 			virtualcluster.WithNodepoolMemoryOpt(cliCtx.Int("memory")),
 			virtualcluster.WithNodepoolCountOpt(cliCtx.Int("nodes")),
+			virtualcluster.WithNodepoolMaxPodsOpt(cliCtx.Int("max-pods")),
 			virtualcluster.WithNodepoolNodeControllerAffinity(affinityLabels),
 		)
 	},
