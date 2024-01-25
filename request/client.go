@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/Azure/kperf/api/types"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubectl/pkg/scheme"
@@ -15,35 +17,25 @@ import (
 //
 // 1. Is it possible to build one http2 client with multiple connections?
 // 2. How to monitor HTTP2 GOAWAY frame?
-func NewClients(kubeCfgPath string, ConnsNum int, userAgent string, qps float64, contentType string) ([]rest.Interface, error) {
+func NewClients(kubeCfgPath string, connsNum int, opts ...ClientCfgOpt) ([]rest.Interface, error) {
+	var cfg = defaultClientCfg
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeCfgPath)
 	if err != nil {
 		return nil, err
 	}
-
-	if qps == 0 {
-		qps = float64(math.MaxInt32)
-	}
-	restCfg.QPS = float32(qps)
 	restCfg.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 
-	restCfg.UserAgent = userAgent
-	if restCfg.UserAgent == "" {
-		restCfg.UserAgent = rest.DefaultKubernetesUserAgent()
+	err = cfg.apply(restCfg)
+	if err != nil {
+		return nil, err
 	}
 
-	// Set the content type
-	switch contentType {
-	case "json":
-		restCfg.ContentType = "application/json"
-	case "protobuf":
-		restCfg.ContentType = "application/vnd.kubernetes.protobuf"
-	default:
-		return nil, fmt.Errorf("invalid content type: %s", contentType)
-	}
-
-	restClients := make([]rest.Interface, 0, ConnsNum)
-	for i := 0; i < ConnsNum; i++ {
+	restClients := make([]rest.Interface, 0, connsNum)
+	for i := 0; i < connsNum; i++ {
 		cfgShallowCopy := *restCfg
 
 		restCli, err := rest.UnversionedRESTClientFor(&cfgShallowCopy)
@@ -53,4 +45,78 @@ func NewClients(kubeCfgPath string, ConnsNum int, userAgent string, qps float64,
 		restClients = append(restClients, restCli)
 	}
 	return restClients, nil
+}
+
+// defaultClientCfg is default setting for http client.
+var defaultClientCfg = clientCfg{
+	qps:         float64(math.MaxInt32),
+	contentType: types.ContentTypeJSON,
+}
+
+type clientCfg struct {
+	userAgent    string
+	qps          float64
+	contentType  types.ContentType
+	disableHTTP2 bool
+}
+
+// apply sets value to k8s.io/client-go/rest.Config.
+func (cfg *clientCfg) apply(restCfg *rest.Config) error {
+	// set qps
+	restCfg.QPS = float32(cfg.qps)
+
+	// set user agent
+	restCfg.UserAgent = cfg.userAgent
+	if restCfg.UserAgent == "" {
+		restCfg.UserAgent = rest.DefaultKubernetesUserAgent()
+	}
+
+	// set the content type
+	switch cfg.contentType {
+	case types.ContentTypeJSON:
+		restCfg.ContentType = "application/json"
+	case types.ContentTypeProtobuffer:
+		restCfg.ContentType = "application/vnd.kubernetes.protobuf"
+	default:
+		return fmt.Errorf("invalid content type: %s", cfg.contentType)
+	}
+
+	// disable HTTP2
+	if cfg.disableHTTP2 {
+		restCfg.NextProtos = []string{"http/1.1"}
+	}
+	return nil
+}
+
+// ClientCfgOpt is used to update default client setting.
+type ClientCfgOpt func(*clientCfg)
+
+// WithClientQPSOpt updates QPS value.
+func WithClientQPSOpt(qps float64) ClientCfgOpt {
+	return func(cfg *clientCfg) {
+		if qps > 0 {
+			cfg.qps = qps
+		}
+	}
+}
+
+// WithClientUserAgentOpt updates user agent.
+func WithClientUserAgentOpt(ua string) ClientCfgOpt {
+	return func(cfg *clientCfg) {
+		cfg.userAgent = ua
+	}
+}
+
+// WithClientContentTypeOpt updates content type of response.
+func WithClientContentTypeOpt(ct types.ContentType) ClientCfgOpt {
+	return func(cfg *clientCfg) {
+		cfg.contentType = ct
+	}
+}
+
+// WithClientDisableHTTP2Opt disables HTTP2 protocol.
+func WithClientDisableHTTP2Opt(b bool) ClientCfgOpt {
+	return func(cfg *clientCfg) {
+		cfg.disableHTTP2 = b
+	}
 }

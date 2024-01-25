@@ -2,6 +2,26 @@ package types
 
 import "fmt"
 
+// ContentType represents the format of response.
+type ContentType string
+
+const (
+	// ContentTypeJSON means the format is json.
+	ContentTypeJSON ContentType = "json"
+	// ContentTypeProtobuffer means the format is protobuf.
+	ContentTypeProtobuffer = "protobuf"
+)
+
+// Validate returns error if ContentType is not supported.
+func (ct ContentType) Validate() error {
+	switch ct {
+	case ContentTypeJSON, ContentTypeProtobuffer:
+		return nil
+	default:
+		return fmt.Errorf("unsupported content type %s", ct)
+	}
+}
+
 // LoadProfile defines how to create load traffic from one host to kube-apiserver.
 type LoadProfile struct {
 	// Version defines the version of this object.
@@ -22,6 +42,10 @@ type LoadProfileSpec struct {
 	Conns int `json:"conns" yaml:"conns"`
 	// Client defines total number of HTTP clients.
 	Client int `json:"client" yaml:"client"`
+	// ContentType defines response's content type.
+	ContentType ContentType `json:"contentType" yaml:"contentType"`
+	// DisableHTTP2 means client will use HTTP/1.1 protocol if it's true.
+	DisableHTTP2 bool `json:"disableHTTP2" yaml:"disableHTTP2"`
 	// Requests defines the different kinds of requests with weights.
 	// The executor should randomly pick by weight.
 	Requests []*WeightedRequest
@@ -116,6 +140,15 @@ func (spec LoadProfileSpec) Validate() error {
 
 	if spec.Total <= 0 {
 		return fmt.Errorf("total requires > 0: %v", spec.Total)
+	}
+
+	if spec.Client <= 0 {
+		return fmt.Errorf("client requires > 0: %v", spec.Client)
+	}
+
+	err := spec.ContentType.Validate()
+	if err != nil {
+		return err
 	}
 
 	for idx, req := range spec.Requests {
