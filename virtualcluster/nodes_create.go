@@ -39,13 +39,17 @@ func CreateNodepool(ctx context.Context, kubeconfigPath string, nodepoolName str
 		return fmt.Errorf("failed to load virtual node chart: %w", err)
 	}
 
+	cfgValues, err := cfg.toHelmValuesAppliers(nodepoolName)
+	if err != nil {
+		return fmt.Errorf("failed to convert to helm values: %w", err)
+	}
 	releaseCli, err := helmcli.NewReleaseCli(
 		kubeconfigPath,
 		virtualnodeReleaseNamespace,
 		nodepoolName,
 		ch,
 		virtualnodeReleaseLabels,
-		cfg.toHelmValuesAppliers(nodepoolName)...,
+		cfgValues...,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create helm release client: %w", err)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -38,6 +39,47 @@ func StringPathValuesApplier(values ...string) ValuesApplier {
 		}
 		return nil
 	}
+}
+
+func YAMLValuesApplier(yamlValues string) (ValuesApplier, error) {
+	values := make(map[string]interface{})
+	err := yaml.Unmarshal([]byte(yamlValues), &values)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(to map[string]interface{}) error {
+		return applyValues(to, values)
+	}, nil
+}
+
+func applyValues(to, from map[string]interface{}) error {
+	for k, v := range from {
+		// If 'to' doesn't have key 'k'
+		if _, checkKey := to[k]; !checkKey {
+			to[k] = v
+			continue
+		}
+
+		// If 'to' has key 'k'
+		switch v := v.(type) {
+		case map[string]interface{}:
+			// If 'v' is of type map[string]interface{}
+			if toMap, checkKey := to[k].(map[string]interface{}); checkKey {
+				if err := applyValues(toMap, v); err != nil {
+					return err
+				}
+			} else {
+				to[k] = v
+
+			}
+		default:
+			// If 'v' is not of type map[string]interface{}
+			to[k] = v
+		}
+
+	}
+	return nil
 }
 
 // ReleaseCli is a client to deploy helm chart with secret storage.
