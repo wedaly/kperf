@@ -38,9 +38,9 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 
 	qps := spec.Rate
 	if qps == 0 {
-		qps = math.MaxInt32
+		qps = float64(math.MaxInt32)
 	}
-	limiter := rate.NewLimiter(rate.Limit(qps), 10)
+	limiter := rate.NewLimiter(rate.Limit(qps), 1)
 
 	reqBuilderCh := rndReqs.Chan()
 	var wg sync.WaitGroup
