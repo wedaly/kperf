@@ -53,7 +53,7 @@ var runCommand = cli.Command{
 			Usage: "Content type (json or protobuf)",
 			Value: "json",
 		},
-		cli.IntFlag{
+		cli.Float64Flag{
 			Name:  "rate",
 			Usage: "Maximum requests per second (Zero means no limitation). It can override corresponding value defined by --config",
 		},
@@ -145,7 +145,7 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 
 	// override value by flags
 	if v := "rate"; cliCtx.IsSet(v) {
-		profileCfg.Spec.Rate = cliCtx.Int(v)
+		profileCfg.Spec.Rate = cliCtx.Float64(v)
 	}
 	if v := "conns"; cliCtx.IsSet(v) || profileCfg.Spec.Conns == 0 {
 		profileCfg.Spec.Conns = cliCtx.Int(v)

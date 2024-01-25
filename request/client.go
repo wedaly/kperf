@@ -15,14 +15,14 @@ import (
 //
 // 1. Is it possible to build one http2 client with multiple connections?
 // 2. How to monitor HTTP2 GOAWAY frame?
-func NewClients(kubeCfgPath string, ConnsNum int, userAgent string, qps int, contentType string) ([]rest.Interface, error) {
+func NewClients(kubeCfgPath string, ConnsNum int, userAgent string, qps float64, contentType string) ([]rest.Interface, error) {
 	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeCfgPath)
 	if err != nil {
 		return nil, err
 	}
 
 	if qps == 0 {
-		qps = math.MaxInt32
+		qps = float64(math.MaxInt32)
 	}
 	restCfg.QPS = float32(qps)
 	restCfg.NegotiatedSerializer = scheme.Codecs.WithoutConversion()

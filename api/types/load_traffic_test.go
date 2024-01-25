@@ -62,7 +62,7 @@ spec:
 	require.NoError(t, yaml.Unmarshal([]byte(in), &target))
 	assert.Equal(t, 1, target.Version)
 	assert.Equal(t, "test", target.Description)
-	assert.Equal(t, 100, target.Spec.Rate)
+	assert.Equal(t, float64(100), target.Spec.Rate)
 	assert.Equal(t, 10000, target.Spec.Total)
 	assert.Equal(t, 2, target.Spec.Conns)
 	assert.Len(t, target.Spec.Requests, 5)

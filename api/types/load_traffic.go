@@ -15,7 +15,7 @@ type LoadProfile struct {
 // LoadProfileSpec defines the load traffic for traget resource.
 type LoadProfileSpec struct {
 	// Rate defines the maximum requests per second (zero is no limit).
-	Rate int `json:"rate" yaml:"rate"`
+	Rate float64 `json:"rate" yaml:"rate"`
 	// Total defines the total number of requests.
 	Total int `json:"total" yaml:"total"`
 	// Conns defines total number of long connections used for traffic.
