@@ -42,11 +42,16 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 	}
 	limiter := rate.NewLimiter(rate.Limit(qps), 1)
 
+	clients := spec.Client
+	if clients == 0 {
+		clients = spec.Conns
+	}
+
 	reqBuilderCh := rndReqs.Chan()
 	var wg sync.WaitGroup
 
 	respMetric := metrics.NewResponseMetric()
-	for i := 0; i < spec.Client; i++ {
+	for i := 0; i < clients; i++ {
 		// reuse connection if clients > conns
 		cli := restCli[i%len(restCli)]
 		wg.Add(1)
@@ -56,13 +61,13 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 			for builder := range reqBuilderCh {
 				_, req := builder.Build(cli)
 
-				klog.V(9).Infof("Request URL: %s", req.URL())
-
 				if err := limiter.Wait(ctx); err != nil {
-					klog.V(9).Infof("Rate limiter wait failed: %v", err)
+					klog.V(5).Infof("Rate limiter wait failed: %v", err)
 					cancel()
 					return
 				}
+
+				klog.V(5).Infof("Request URL: %s", req.URL())
 
 				req = req.Timeout(defaultTimeout)
 				func() {
@@ -81,12 +86,21 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 
 					if err != nil {
 						respMetric.ObserveFailure(err)
-						klog.V(9).Infof("Request stream failed: %v", err)
+						klog.V(5).Infof("Request stream failed: %v", err)
 					}
 				}()
 			}
 		}(cli)
 	}
+
+	klog.V(2).InfoS("Setting",
+		"clients", clients,
+		"connections", len(restCli),
+		"rate", qps,
+		"total", spec.Total,
+		"http2", !spec.DisableHTTP2,
+		"content-type", spec.ContentType,
+	)
 
 	start := time.Now()
 

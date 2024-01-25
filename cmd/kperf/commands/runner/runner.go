@@ -50,8 +50,8 @@ var runCommand = cli.Command{
 		},
 		cli.StringFlag{
 			Name:  "content-type",
-			Usage: "Content type (json or protobuf)",
-			Value: "json",
+			Usage: fmt.Sprintf("Content type (%v or %v)", types.ContentTypeJSON, types.ContentTypeProtobuffer),
+			Value: string(types.ContentTypeJSON),
 		},
 		cli.Float64Flag{
 			Name:  "rate",
@@ -66,6 +66,10 @@ var runCommand = cli.Command{
 			Name:  "user-agent",
 			Usage: "User Agent",
 		},
+		cli.BoolFlag{
+			Name:  "disable-http2",
+			Usage: "Disable HTTP2 protocol",
+		},
 		cli.StringFlag{
 			Name:  "result",
 			Usage: "Path to the file which stores results",
@@ -76,31 +80,32 @@ var runCommand = cli.Command{
 		},
 	},
 	Action: func(cliCtx *cli.Context) error {
+		kubeCfgPath := cliCtx.String("kubeconfig")
+
 		profileCfg, err := loadConfig(cliCtx)
 		if err != nil {
 			return err
 		}
 
-		// Get the content type from the command-line flag
-		contentType := cliCtx.String("content-type")
-		kubeCfgPath := cliCtx.String("kubeconfig")
-		userAgent := cliCtx.String("user-agent")
-		outputFilePath := cliCtx.String("result")
-		rawDataFlagIncluded := cliCtx.Bool("raw-data")
-
-		conns := profileCfg.Spec.Conns
-		rate := profileCfg.Spec.Rate
-		restClis, err := request.NewClients(kubeCfgPath, conns, userAgent, rate, contentType)
+		clientNum := profileCfg.Spec.Conns
+		restClis, err := request.NewClients(kubeCfgPath,
+			clientNum,
+			request.WithClientUserAgentOpt(cliCtx.String("user-agent")),
+			request.WithClientQPSOpt(profileCfg.Spec.Rate),
+			request.WithClientContentTypeOpt(profileCfg.Spec.ContentType),
+			request.WithClientDisableHTTP2Opt(profileCfg.Spec.DisableHTTP2),
+		)
 		if err != nil {
 			return err
 		}
-		stats, err := request.Schedule(context.TODO(), &profileCfg.Spec, restClis)
 
+		stats, err := request.Schedule(context.TODO(), &profileCfg.Spec, restClis)
 		if err != nil {
 			return err
 		}
 
 		var f *os.File = os.Stdout
+		outputFilePath := cliCtx.String("result")
 		if outputFilePath != "" {
 			outputFileDir := filepath.Dir(outputFilePath)
 
@@ -119,6 +124,7 @@ var runCommand = cli.Command{
 			defer f.Close()
 		}
 
+		rawDataFlagIncluded := cliCtx.Bool("raw-data")
 		err = printResponseStats(f, rawDataFlagIncluded, stats)
 		if err != nil {
 			return fmt.Errorf("error while printing response stats: %w", err)
@@ -155,6 +161,12 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	}
 	if v := "total"; cliCtx.IsSet(v) || profileCfg.Spec.Total == 0 {
 		profileCfg.Spec.Total = cliCtx.Int(v)
+	}
+	if v := "content-type"; cliCtx.IsSet(v) || profileCfg.Spec.ContentType == "" {
+		profileCfg.Spec.ContentType = types.ContentType(cliCtx.String(v))
+	}
+	if v := "disable-http2"; cliCtx.IsSet(v) {
+		profileCfg.Spec.DisableHTTP2 = cliCtx.Bool(v)
 	}
 
 	if err := profileCfg.Validate(); err != nil {
