@@ -3,13 +3,35 @@ package request
 import (
 	"fmt"
 	"math"
+	"net/http"
 
 	"github.com/Azure/kperf/api/types"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/metrics"
+	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/scheme"
 )
+
+// FIXME(weifu):
+//
+// Write UT to cover it instead of hook
+type transportCacheTracker struct{}
+
+// Increment implements k8s.io/client-go/tools/metrics.TransportCreateCallsMetric interface.
+func (t *transportCacheTracker) Increment(result string) {
+	if result != "uncacheable" {
+		klog.Fatal("unexpected use cache transport")
+	}
+	klog.V(3).Infof("transport cache: %s", result)
+}
+
+func init() {
+	metrics.Register(metrics.RegisterOpts{
+		TransportCreateCalls: &transportCacheTracker{},
+	})
+}
 
 // NewClients creates N rest.Interface.
 //
@@ -28,6 +50,16 @@ func NewClients(kubeCfgPath string, connsNum int, opts ...ClientCfgOpt) ([]rest.
 		return nil, err
 	}
 	restCfg.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+
+	// NOTE:
+	//
+	// Make transport uncacheable. With default proxy function, client-go
+	// will create new transport even if multiple clients use the same TLS
+	// configuration. If not, all the clients will share one transport.
+	// If protocol is HTTP2, there will be only one connection.
+	//
+	// REF: https://github.com/kubernetes/client-go/blob/c5938c6876a62f53c1f4ee55b879ca5c74253ae8/transport/cache.go#L154
+	restCfg.Proxy = http.ProxyFromEnvironment
 
 	err = cfg.apply(restCfg)
 	if err != nil {
