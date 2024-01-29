@@ -9,29 +9,8 @@ import (
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/metrics"
-	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/scheme"
 )
-
-// FIXME(weifu):
-//
-// Write UT to cover it instead of hook
-type transportCacheTracker struct{}
-
-// Increment implements k8s.io/client-go/tools/metrics.TransportCreateCallsMetric interface.
-func (t *transportCacheTracker) Increment(result string) {
-	if result != "uncacheable" {
-		klog.Fatal("unexpected use cache transport")
-	}
-	klog.V(3).Infof("transport cache: %s", result)
-}
-
-func init() {
-	metrics.Register(metrics.RegisterOpts{
-		TransportCreateCalls: &transportCacheTracker{},
-	})
-}
 
 // NewClients creates N rest.Interface.
 //
