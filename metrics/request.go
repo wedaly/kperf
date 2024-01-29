@@ -2,6 +2,8 @@ package metrics
 
 import (
 	"container/list"
+	"errors"
+	"io"
 	"sync"
 	"sync/atomic"
 
@@ -22,16 +24,15 @@ type ResponseMetric interface {
 
 type responseMetricImpl struct {
 	mu            sync.Mutex
-	failureList   []error
+	errorStats    *types.ResponseErrorStats
 	latencies     *list.List
 	receivedBytes int64
 }
 
 func NewResponseMetric() ResponseMetric {
-	errList := make([]error, 0, 1024)
 	return &responseMetricImpl{
-		latencies:   list.New(),
-		failureList: errList,
+		latencies:  list.New(),
+		errorStats: types.NewResponseErrorStats(),
 	}
 }
 
@@ -44,9 +45,25 @@ func (m *responseMetricImpl) ObserveLatency(seconds float64) {
 
 // ObserveFailure implements ResponseMetric.
 func (m *responseMetricImpl) ObserveFailure(err error) {
+	if err == nil {
+		return
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.failureList = append(m.failureList, err)
+
+	// HTTP2 -> TCP/TLS -> Unknown
+	code := codeFromHTTP(err)
+	switch {
+	case code != 0:
+		m.errorStats.ResponseCodes[code]++
+	case isHTTP2Error(err):
+		updateHTTP2ErrorStats(m.errorStats, err)
+	case isDialTimeoutError(err) || errors.Is(err, io.ErrUnexpectedEOF) || isConnectionRefused(err):
+		updateNetErrors(m.errorStats, err)
+	default:
+		m.errorStats.UnknownErrors = append(m.errorStats.UnknownErrors, err.Error())
+	}
 }
 
 // ObserveReceivedBytes implements ResponseMetric.
@@ -56,10 +73,9 @@ func (m *responseMetricImpl) ObserveReceivedBytes(bytes int64) {
 
 // Gather implements ResponseMetric.
 func (m *responseMetricImpl) Gather() types.ResponseStats {
-	latencies := m.dumpLatencies()
 	return types.ResponseStats{
-		FailureList:        m.failureList,
-		Latencies:          latencies,
+		ErrorStats:         m.dumpErrorStats(),
+		Latencies:          m.dumpLatencies(),
 		TotalReceivedBytes: atomic.LoadInt64(&m.receivedBytes),
 	}
 }
@@ -72,4 +88,11 @@ func (m *responseMetricImpl) dumpLatencies() []float64 {
 		res = append(res, e.Value.(float64))
 	}
 	return res
+}
+
+func (m *responseMetricImpl) dumpErrorStats() types.ResponseErrorStats {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.errorStats.Copy()
 }

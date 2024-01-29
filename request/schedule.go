@@ -72,17 +72,17 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 				req = req.Timeout(defaultTimeout)
 				func() {
 					start := time.Now()
-					defer func() {
-						respMetric.ObserveLatency(time.Since(start).Seconds())
-					}()
 
 					var bytes int64
 					respBody, err := req.Stream(context.Background())
 					if err == nil {
 						defer respBody.Close()
 						bytes, err = io.Copy(io.Discard, respBody)
-						respMetric.ObserveReceivedBytes(bytes)
 					}
+					latency := time.Since(start).Seconds()
+
+					respMetric.ObserveLatency(latency)
+					respMetric.ObserveReceivedBytes(bytes)
 
 					if err != nil {
 						respMetric.ObserveFailure(err)

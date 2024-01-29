@@ -59,7 +59,7 @@ func buildNetListeners(addrs []string) (_ []net.Listener, retErr error) {
 func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *types.RunnerMetricReport {
 	totalBytes := int64(0)
 	latencies := list.New()
-	errors := make([]error, 0, 1024)
+	errStats := types.NewResponseErrorStats()
 	maxDuration := 0 * time.Second
 
 	for idx := range groups {
@@ -86,12 +86,18 @@ func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *type
 				continue
 			}
 
+			// update totalReceivedBytes
 			totalBytes += report.TotalReceivedBytes
-			errors = append(errors, report.FailureList...)
+
+			// update latencies
 			for _, v := range report.Latencies {
 				latencies.PushBack(v)
 			}
 
+			// update error stats
+			errStats.Merge(&report.ErrorStats)
+
+			// update max duration
 			rDur, err := time.ParseDuration(report.Duration)
 			if err != nil {
 				klog.V(2).ErrorS(err, "failed to parse duration", "runner",
@@ -105,7 +111,7 @@ func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *type
 
 	return &types.RunnerMetricReport{
 		Total:               latencies.Len(),
-		FailureList:         errors,
+		ErrorStats:          *errStats,
 		Duration:            maxDuration.String(),
 		TotalReceivedBytes:  totalBytes,
 		PercentileLatencies: metrics.BuildPercentileLatencies(listToSliceFloat64(latencies)),

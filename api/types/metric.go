@@ -1,26 +1,85 @@
 package types
 
+// HTTP2ErrorStats is the report about http2 error during testing.
+type HTTP2ErrorStats struct {
+	// ConnectionErrors represents connection level errors.
+	ConnectionErrors map[string]int32 `json:"connectionErrors,omitempty"`
+	// StreamErrors represents stream level errors.
+	StreamErrors map[string]int32 `json:"streamErrors,omitempty"`
+}
+
+// NewHTTP2ErrorStats returns new instance of HTTP2ErrorStats.
+func NewHTTP2ErrorStats() *HTTP2ErrorStats {
+	return &HTTP2ErrorStats{
+		ConnectionErrors: make(map[string]int32, 10),
+		StreamErrors:     make(map[string]int32, 10),
+	}
+}
+
+// ResponseErrorStats is the report about errors.
+type ResponseErrorStats struct {
+	// UnknownErrors is all unknown errors.
+	UnknownErrors []string `json:"unknownErrors"`
+	// NetErrors is to track errors from net.
+	NetErrors map[string]int32 `json:"netErrors,omitempty"`
+	// ResponseCodes records request number grouped by response
+	// code between 400 and 600.
+	ResponseCodes map[int]int32 `json:"responseCodes"`
+	// HTTP2Errors records http2 related errors.
+	HTTP2Errors HTTP2ErrorStats `json:"http2Errors"`
+}
+
+// NewResponseErrorStats returns empty ResponseErrorStats.
+func NewResponseErrorStats() *ResponseErrorStats {
+	return &ResponseErrorStats{
+		UnknownErrors: make([]string, 0, 1024),
+		NetErrors:     map[string]int32{},
+		ResponseCodes: map[int]int32{},
+		HTTP2Errors:   *NewHTTP2ErrorStats(),
+	}
+}
+
+// Copy clones self.
+func (r *ResponseErrorStats) Copy() ResponseErrorStats {
+	res := NewResponseErrorStats()
+
+	copy(res.UnknownErrors, r.UnknownErrors)
+	res.NetErrors = cloneMap(r.NetErrors)
+	res.ResponseCodes = cloneMap(r.ResponseCodes)
+	res.HTTP2Errors.ConnectionErrors = cloneMap(r.HTTP2Errors.ConnectionErrors)
+	res.HTTP2Errors.StreamErrors = cloneMap(r.HTTP2Errors.StreamErrors)
+	return *res
+}
+
+// Merge merges two ResponseErrorStats.
+func (r *ResponseErrorStats) Merge(from *ResponseErrorStats) {
+	r.UnknownErrors = append(r.UnknownErrors, from.UnknownErrors...)
+	mergeMap(r.NetErrors, from.NetErrors)
+	mergeMap(r.HTTP2Errors.ConnectionErrors, from.HTTP2Errors.ConnectionErrors)
+	mergeMap(r.HTTP2Errors.StreamErrors, from.HTTP2Errors.StreamErrors)
+}
+
 // ResponseStats is the report about benchmark result.
 type ResponseStats struct {
-	// List of failures
-	FailureList []error
-	// All the observed latencies
+	// ErrorStats means summary of errors.
+	ErrorStats ResponseErrorStats
+	// Latencies stores all the observed latencies.
 	Latencies []float64
-	// total bytes read from apiserver
+	// TotalReceivedBytes is total bytes read from apiserver.
 	TotalReceivedBytes int64
 }
 
 type RunnerMetricReport struct {
 	// Total represents total number of requests.
 	Total int `json:"total"`
-	// List of failures
-	FailureList []error `json:"failureList,omitempty"`
 	// Duration means the time of benchmark.
 	Duration string `json:"duration"`
-	// All the observed latencies
-	Latencies []float64 `json:"latencies,omitempty"`
-	// total bytes read from apiserver
+	// ErrorStats means summary of errors.
+	ErrorStats ResponseErrorStats `json:"errorStats"`
+	// TotalReceivedBytes is total bytes read from apiserver.
 	TotalReceivedBytes int64 `json:"totalReceivedBytes"`
+	// Latencies stores all the observed latencies.
+	Latencies []float64 `json:"latencies,omitempty"`
 	// PercentileLatencies represents the latency distribution in seconds.
 	PercentileLatencies [][2]float64 `json:"percentileLatencies,omitempty"`
 }
@@ -28,3 +87,17 @@ type RunnerMetricReport struct {
 // TODO(weifu): build brand new struct for RunnerGroupsReport to include more
 // information, like how many runner groups, service account and flow control.
 type RunnerGroupsReport = RunnerMetricReport
+
+func mergeMap[K comparable, V int32](to, from map[K]V) {
+	for key, value := range from {
+		to[key] += value
+	}
+}
+
+func cloneMap[K comparable, V int32](src map[K]V) map[K]V {
+	res := map[K]V{}
+	for key, value := range src {
+		res[key] = value
+	}
+	return res
+}

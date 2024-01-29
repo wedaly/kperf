@@ -1,8 +1,20 @@
 package metrics
 
 import (
+	"context"
+	"errors"
+	"io"
 	"math"
+	"net"
+	"net/http"
 	"sort"
+	"strings"
+	"syscall"
+
+	"github.com/Azure/kperf/api/types"
+
+	"golang.org/x/net/http2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // BuildPercentileLatencies builds percentile latencies.
@@ -25,4 +37,149 @@ func BuildPercentileLatencies(latencies []float64) [][2]float64 {
 		res[pi] = [2]float64{pv, latencies[idx]}
 	}
 	return res
+}
+
+var (
+	// errHTTP2ClientConnectionLost is used to track unexported http2 error.
+	errHTTP2ClientConnectionLost = errors.New("http2: client connection lost")
+
+	// errTLSHandshakeTimeout is used to track unexported tlsHandshakeTimeoutError from net/http.
+	errTLSHandshakeTimeout = errors.New("net/http: TLS handshake timeout")
+
+	// errNetIOTimeout is used to track unexported errTimeout from net.
+	errNetIOTimeout = errors.New("i/o timeout")
+)
+
+// codeFromHTTP parses error to get http code.
+func codeFromHTTP(err error) int {
+	if err == nil {
+		return 0
+	}
+
+	switch {
+	case apierrors.IsBadRequest(err):
+		return http.StatusBadRequest // 400
+	case apierrors.IsUnauthorized(err):
+		return http.StatusUnauthorized // 401
+	case apierrors.IsForbidden(err):
+		return http.StatusForbidden // 403
+	case apierrors.IsNotFound(err):
+		return http.StatusNotFound // 404
+	case apierrors.IsMethodNotSupported(err):
+		return http.StatusMethodNotAllowed // 405
+	case apierrors.IsNotAcceptable(err):
+		return http.StatusNotAcceptable // 406
+	case apierrors.IsAlreadyExists(err):
+		return http.StatusConflict // 409
+	case apierrors.IsGone(err):
+		return http.StatusGone // 410
+	case apierrors.IsRequestEntityTooLargeError(err):
+		return http.StatusRequestEntityTooLarge // 413
+	case apierrors.IsUnsupportedMediaType(err):
+		return http.StatusUnsupportedMediaType // 415
+	case apierrors.IsInvalid(err):
+		return http.StatusUnprocessableEntity // 422
+	case apierrors.IsTooManyRequests(err):
+		return http.StatusTooManyRequests // 429
+	case apierrors.IsInternalError(err):
+		return http.StatusInternalServerError // 500
+	case apierrors.IsServiceUnavailable(err):
+		return http.StatusServiceUnavailable // 503
+	case apierrors.IsTimeout(err):
+		return http.StatusGatewayTimeout // 504
+	default:
+		if status, ok := err.(apierrors.APIStatus); ok || errors.As(err, &status) {
+			return int(status.Status().Code)
+		}
+		return 0
+	}
+}
+
+// updateHTTP2ErrorStats updates stats if err is http2 error.
+func updateHTTP2ErrorStats(stats *types.ResponseErrorStats, err error) {
+	if connErr, ok := err.(http2.ConnectionError); ok || errors.As(err, &connErr) {
+		stats.HTTP2Errors.ConnectionErrors[(http2.ErrCode(connErr)).String()]++
+		return
+	}
+
+	if streamErr, ok := err.(http2.StreamError); ok || errors.As(err, &streamErr) {
+		stats.HTTP2Errors.StreamErrors[streamErr.Code.String()]++
+		return
+	}
+
+	if strings.Contains(err.Error(), errHTTP2ClientConnectionLost.Error()) {
+		stats.HTTP2Errors.ConnectionErrors[errHTTP2ClientConnectionLost.Error()]++
+	}
+}
+
+// updateNetErrors updates stats if err is related net error.
+func updateNetErrors(stats *types.ResponseErrorStats, err error) {
+	if err == nil {
+		return
+	}
+
+	errInStr := err.Error()
+	switch {
+	case isDialTimeoutError(err):
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
+			stats.NetErrors[errNetIOTimeout.Error()]++
+		case strings.Contains(errInStr, errTLSHandshakeTimeout.Error()):
+			stats.NetErrors[errTLSHandshakeTimeout.Error()]++
+		}
+	case errors.Is(err, io.ErrUnexpectedEOF):
+		stats.NetErrors[io.ErrUnexpectedEOF.Error()]++
+	case isConnectionRefused(err):
+		stats.NetErrors[syscall.ECONNREFUSED.Error()]++
+	default:
+		// TODO(weifu): add more categories.
+	}
+}
+
+// isHTTP2Error returns true if it's related to http2 error.
+func isHTTP2Error(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if connErr, ok := err.(http2.ConnectionError); ok || errors.As(err, &connErr) {
+		return true
+	}
+
+	if streamErr, ok := err.(http2.StreamError); ok || errors.As(err, &streamErr) {
+		return true
+	}
+
+	if strings.Contains(err.Error(), errHTTP2ClientConnectionLost.Error()) {
+		return true
+	}
+	return false
+}
+
+// isDialTimeoutError returns true if it's related to golang standard library
+// net's timeout error.
+func isDialTimeoutError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	err = errors.Unwrap(err)
+	terr, ok := err.(net.Error)
+	if !ok || !terr.Timeout() {
+		return false
+	}
+	return true
+}
+
+// isConnectionRefused returns true if the error is connection refused
+func isConnectionRefused(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		return errno == syscall.ECONNREFUSED
+	}
+	return false
 }
