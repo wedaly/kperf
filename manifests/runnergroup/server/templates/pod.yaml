@@ -18,6 +18,8 @@ spec:
     - {{ .Values.image }}
     - --runner-owner
     - v1:Pod:$(POD_NAME):$(POD_UID)
+    - --runner-sa
+    - {{ .Values.name }}
     - --address
     - $(POD_IP):8080
     - --address

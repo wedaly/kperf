@@ -35,6 +35,10 @@ var serverCommand = cli.Command{
 			Name:  "runner-owner",
 			Usage: "The runners depend on this object (FORMAT: APIVersion:Kind:Name:UID)",
 		},
+		cli.StringFlag{
+			Name:  "runner-sa",
+			Usage: "Override runner group's service account",
+		},
 		cli.StringSliceFlag{
 			Name:     "address",
 			Usage:    "Address for the server",
@@ -89,6 +93,11 @@ func buildRunnerGroupHandlers(cliCtx *cli.Context, serverName string) ([]*runner
 		ownerRef = cliCtx.String("runner-owner")
 	}
 
+	sa := ""
+	if cliCtx.IsSet("runner-sa") {
+		sa = cliCtx.String("runner-sa")
+	}
+
 	groups := make([]*runnergroup.Handler, 0, len(specURIs))
 	for idx, specURI := range specURIs {
 		spec, err := runnergroup.NewRunnerGroupSpecFromURI(clientset, specURI)
@@ -98,6 +107,10 @@ func buildRunnerGroupHandlers(cliCtx *cli.Context, serverName string) ([]*runner
 
 		if ownerRef != "" {
 			spec.OwnerReference = &ownerRef
+		}
+
+		if sa != "" {
+			spec.ServiceAccount = &sa
 		}
 
 		groupName := fmt.Sprintf("%s-%d", serverName, idx)
