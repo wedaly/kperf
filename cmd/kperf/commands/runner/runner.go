@@ -179,7 +179,7 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 func printResponseStats(f *os.File, rawDataFlagIncluded bool, stats *request.Result) error {
 	output := types.RunnerMetricReport{
 		Total:               stats.Total,
-		FailureList:         stats.FailureList,
+		ErrorStats:          stats.ErrorStats,
 		Duration:            stats.Duration.String(),
 		Latencies:           stats.Latencies,
 		TotalReceivedBytes:  stats.TotalReceivedBytes,
