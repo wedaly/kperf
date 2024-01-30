@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Azure/kperf/helmcli"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -98,12 +99,25 @@ func WithNodepoolNodeControllerAffinity(nodeSelectors map[string][]string) Nodep
 // NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
 //
 // TODO: Add YAML ValuesAppliers to support array type.
-func (cfg *nodepoolConfig) toHelmValuesAppliers(nodepoolName string) []helmcli.ValuesApplier {
+func (cfg *nodepoolConfig) toHelmValuesAppliers(nodepoolName string) ([]helmcli.ValuesApplier, error) {
 	res := make([]string, 0, 4)
 
 	res = append(res, fmt.Sprintf("name=%s", nodepoolName))
 	res = append(res, fmt.Sprintf("replicas=%d", cfg.count))
 	res = append(res, fmt.Sprintf("cpu=%d", cfg.cpu))
 	res = append(res, fmt.Sprintf("memory=%d", cfg.memory))
-	return []helmcli.ValuesApplier{helmcli.StringPathValuesApplier(res...)}
+
+	stringPathApplier := helmcli.StringPathValuesApplier(res...)
+
+	// Marshal nodeSelectors to YAML
+	nodeSelectorsYaml, err := yaml.Marshal(cfg.nodeSelectors)
+	if err != nil {
+		return nil, err
+	}
+	// Create YAML ValuesAppliers nodeSelectors
+	nodeSelectorsApplier, err := helmcli.YAMLValuesApplier(string(nodeSelectorsYaml))
+	if err != nil {
+		return nil, err
+	}
+	return []helmcli.ValuesApplier{stringPathApplier, nodeSelectorsApplier}, nil
 }
