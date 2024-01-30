@@ -2,3 +2,4 @@ name: ""
 image: ""
 # TODO(weifu): need https://github.com/Azure/kperf/issues/25 to support list
 runnerGroupSpec: ""
+nodeSelectors: {}

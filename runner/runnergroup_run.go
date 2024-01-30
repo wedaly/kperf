@@ -17,10 +17,25 @@ import (
 // TODO:
 // 1. create a new package to define ErrNotFound, ErrAlreadyExists, ... errors.
 // 2. support configurable timeout.
-func CreateRunnerGroupServer(ctx context.Context, kubeconfigPath string, runnerImage string, rgSpec *types.RunnerGroupSpec) error {
+func CreateRunnerGroupServer(ctx context.Context,
+	kubeconfigPath string,
+	runnerImage string,
+	rgSpec *types.RunnerGroupSpec,
+	nodeSelectors map[string][]string,
+) error {
 	specInStr, err := tweakAndMarshalSpec(rgSpec)
 	if err != nil {
 		return err
+	}
+
+	nodeSelectorsInYAML, err := renderNodeSelectors(nodeSelectors)
+	if err != nil {
+		return err
+	}
+
+	nodeSelectorsAppiler, err := helmcli.YAMLValuesApplier(nodeSelectorsInYAML)
+	if err != nil {
+		return fmt.Errorf("failed to prepare YAML value applier for nodeSelectors: %w", err)
 	}
 
 	getCli, err := helmcli.NewGetCli(kubeconfigPath, runnerGroupReleaseNamespace)
@@ -49,6 +64,7 @@ func CreateRunnerGroupServer(ctx context.Context, kubeconfigPath string, runnerI
 			"image="+runnerImage,
 			"runnerGroupSpec="+specInStr,
 		),
+		nodeSelectorsAppiler,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create helm release client: %w", err)
@@ -70,4 +86,18 @@ func tweakAndMarshalSpec(spec *types.RunnerGroupSpec) (string, error) {
 		return "", fmt.Errorf("failed to marshal spec: %w", err)
 	}
 	return string(data), nil
+}
+
+// renderNodeSelectors renders labels into YAML string.
+func renderNodeSelectors(labels map[string][]string) (string, error) {
+	// NOTE: It should be aligned with ../manifests/runnergroup/server/values.yaml.
+	target := map[string]interface{}{
+		"nodeSelectors": labels,
+	}
+
+	rawData, err := yaml.Marshal(target)
+	if err != nil {
+		return "", fmt.Errorf("failed to render nodeSelectors: %w", err)
+	}
+	return string(rawData), nil
 }
