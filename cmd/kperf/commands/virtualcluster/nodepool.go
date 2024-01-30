@@ -46,6 +46,10 @@ var nodepoolAddCommand = cli.Command{
 			Usage: "The allocatable Memory resource per node (GiB)",
 			Value: 16,
 		},
+		cli.StringSliceFlag{
+			Name:  "affinity",
+			Usage: "Deploy controllers to the nodes with a specific labels (FORMAT: KEY=VALUE[,VALUE])",
+		},
 	},
 	Action: func(cliCtx *cli.Context) error {
 		if cliCtx.NArg() != 1 {
@@ -58,12 +62,18 @@ var nodepoolAddCommand = cli.Command{
 
 		kubeCfgPath := cliCtx.String("kubeconfig")
 
+		affinityLabels, err := stringSliceToMap(cliCtx.StringSlice("affinity"))
+		if err != nil {
+			return fmt.Errorf("failed to parse affinity: %w", err)
+		}
+
 		return virtualcluster.CreateNodepool(context.Background(),
 			kubeCfgPath,
 			nodepoolName,
 			virtualcluster.WithNodepoolCPUOpt(cliCtx.Int("cpu")),
 			virtualcluster.WithNodepoolMemoryOpt(cliCtx.Int("memory")),
 			virtualcluster.WithNodepoolCountOpt(cliCtx.Int("nodes")),
+			virtualcluster.WithNodepoolNodeControllerAffinity(affinityLabels),
 		)
 	},
 }

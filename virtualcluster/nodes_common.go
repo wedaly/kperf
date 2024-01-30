@@ -109,15 +109,29 @@ func (cfg *nodepoolConfig) toHelmValuesAppliers(nodepoolName string) ([]helmcli.
 
 	stringPathApplier := helmcli.StringPathValuesApplier(res...)
 
-	// Marshal nodeSelectors to YAML
-	nodeSelectorsYaml, err := yaml.Marshal(cfg.nodeSelectors)
+	nodeSelectorsYaml, err := cfg.renderNodeSelectors()
 	if err != nil {
 		return nil, err
 	}
-	// Create YAML ValuesAppliers nodeSelectors
-	nodeSelectorsApplier, err := helmcli.YAMLValuesApplier(string(nodeSelectorsYaml))
+
+	nodeSelectorsApplier, err := helmcli.YAMLValuesApplier(nodeSelectorsYaml)
 	if err != nil {
 		return nil, err
 	}
 	return []helmcli.ValuesApplier{stringPathApplier, nodeSelectorsApplier}, nil
+}
+
+// renderNodeSelectors renders nodeSelectors config into YAML string.
+//
+// NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
+func (cfg *nodepoolConfig) renderNodeSelectors() (string, error) {
+	target := map[string]interface{}{
+		"controllerNodeSelectors": cfg.nodeSelectors,
+	}
+
+	rawData, err := yaml.Marshal(target)
+	if err != nil {
+		return "", fmt.Errorf("failed to render nodeSelectors: %w", err)
+	}
+	return string(rawData), nil
 }
