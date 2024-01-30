@@ -2,8 +2,23 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+
+	"k8s.io/client-go/util/homedir"
 )
+
+// DefaultKubeConfigPath is default kubeconfig path if there is home dir.
+var DefaultKubeConfigPath string
+
+func init() {
+	if !inCluster() {
+		if home := homedir.HomeDir(); home != "" {
+			DefaultKubeConfigPath = filepath.Join(home, ".kube", "config")
+		}
+	}
+}
 
 // KeyValuesMap converts key=value[,value] into map[string][]string.
 func KeyValuesMap(strs []string) (map[string][]string, error) {
@@ -17,4 +32,15 @@ func KeyValuesMap(strs []string) (map[string][]string, error) {
 		res[key] = values
 	}
 	return res, nil
+}
+
+// inCluster is to check if current process is in pod.
+func inCluster() bool {
+	f, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil || f.IsDir() {
+		return false
+	}
+
+	return os.Getenv("KUBERNETES_SERVICE_HOST") != "" &&
+		os.Getenv("KUBERNETES_SERVICE_PORT") != ""
 }
