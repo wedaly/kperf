@@ -9,7 +9,19 @@ import (
 	"github.com/Azure/kperf/helmcli"
 	"github.com/Azure/kperf/manifests"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
+)
+
+var (
+	defaultRunCmdCfg = runCmdConfig{
+		runnerGroupFlowcontrol: struct {
+			priorityLevel      string
+			matchingPrecedence int
+		}{
+			priorityLevel:      "workload-low",
+			matchingPrecedence: 1000,
+		},
+	}
 )
 
 // CreateRunnerGroupServer creates a long running server to deploy runner groups.
@@ -21,21 +33,21 @@ func CreateRunnerGroupServer(ctx context.Context,
 	kubeconfigPath string,
 	runnerImage string,
 	rgSpec *types.RunnerGroupSpec,
-	nodeSelectors map[string][]string,
+	opts ...RunCmdOpt,
 ) error {
 	specInStr, err := tweakAndMarshalSpec(rgSpec)
 	if err != nil {
 		return err
 	}
 
-	nodeSelectorsInYAML, err := renderNodeSelectors(nodeSelectors)
-	if err != nil {
-		return err
+	cfg := defaultRunCmdCfg
+	for _, opt := range opts {
+		opt(&cfg)
 	}
 
-	nodeSelectorsAppiler, err := helmcli.YAMLValuesApplier(nodeSelectorsInYAML)
+	appiler, err := cfg.toServerHelmValuesAppiler()
 	if err != nil {
-		return fmt.Errorf("failed to prepare YAML value applier for nodeSelectors: %w", err)
+		return err
 	}
 
 	getCli, err := helmcli.NewGetCli(kubeconfigPath, runnerGroupReleaseNamespace)
@@ -64,7 +76,7 @@ func CreateRunnerGroupServer(ctx context.Context,
 			"image="+runnerImage,
 			"runnerGroupSpec="+specInStr,
 		),
-		nodeSelectorsAppiler,
+		appiler,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create helm release client: %w", err)
@@ -88,16 +100,60 @@ func tweakAndMarshalSpec(spec *types.RunnerGroupSpec) (string, error) {
 	return string(data), nil
 }
 
-// renderNodeSelectors renders labels into YAML string.
-func renderNodeSelectors(labels map[string][]string) (string, error) {
-	// NOTE: It should be aligned with ../manifests/runnergroup/server/values.yaml.
-	target := map[string]interface{}{
-		"nodeSelectors": labels,
+type runCmdConfig struct {
+	// serverNodeSelectors forces to schedule server to nodes with that specific labels.
+	serverNodeSelectors map[string][]string
+	// runnerGroupFlowcontrol applies flowcontrol settings to runners.
+	//
+	// NOTE: Please align with ../manifests/runnergroup/server/values.yaml
+	//
+	// FIXME(weifu): before v1.0.0, we should define type in ../manifests.
+	runnerGroupFlowcontrol struct {
+		priorityLevel      string
+		matchingPrecedence int
 	}
 
-	rawData, err := yaml.Marshal(target)
-	if err != nil {
-		return "", fmt.Errorf("failed to render nodeSelectors: %w", err)
+	// TODO(weifu): merge name/image/specs into this
+}
+
+// RunCmdOpt is used to update default run command's setting.
+type RunCmdOpt func(*runCmdConfig)
+
+// WithRunCmdServerNodeSelectorsOpt updates server's node selectors.
+func WithRunCmdServerNodeSelectorsOpt(labels map[string][]string) RunCmdOpt {
+	return func(cfg *runCmdConfig) {
+		cfg.serverNodeSelectors = labels
 	}
-	return string(rawData), nil
+}
+
+// WithRunCmdRunnerGroupFlowControl updates runner groups' flowcontrol.
+func WithRunCmdRunnerGroupFlowControl(priorityLevel string, matchingPrecedence int) RunCmdOpt {
+	return func(cfg *runCmdConfig) {
+		cfg.runnerGroupFlowcontrol.priorityLevel = priorityLevel
+		cfg.runnerGroupFlowcontrol.matchingPrecedence = matchingPrecedence
+	}
+}
+
+// toServerHelmValuesAppiler creates ValuesApplier.
+//
+// NOTE: It should be aligned with ../manifests/runnergroup/server/values.yaml.
+func (cfg *runCmdConfig) toServerHelmValuesAppiler() (helmcli.ValuesApplier, error) {
+	values := map[string]interface{}{
+		"nodeSelectors": cfg.serverNodeSelectors,
+		"flowcontrol": map[string]interface{}{
+			"priorityLevelConfiguration": cfg.runnerGroupFlowcontrol.priorityLevel,
+			"matchingPrecedence":         cfg.runnerGroupFlowcontrol.matchingPrecedence,
+		},
+	}
+
+	rawData, err := yaml.Marshal(values)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render run command config into YAML: %w", err)
+	}
+
+	appiler, err := helmcli.YAMLValuesApplier(string(rawData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare value appiler for run command config: %w", err)
+	}
+	return appiler, nil
 }

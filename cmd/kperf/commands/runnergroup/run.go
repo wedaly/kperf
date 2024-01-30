@@ -3,6 +3,8 @@ package runnergroup
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/cmd/kperf/commands/utils"
@@ -32,6 +34,11 @@ var runCommand = cli.Command{
 			// Right now, we need to set image manually.
 			Required: true,
 		},
+		cli.StringFlag{
+			Name:  "runner-flowcontrol",
+			Usage: "Apply flowcontrol to runner group. (FORMAT: PriorityLevel:MatchingPrecedence)",
+			Value: "workload-low:1000",
+		},
 		cli.StringSliceFlag{
 			Name:  "affinity",
 			Usage: "Deploy server to the node with a specific labels (FORMAT: KEY=VALUE[,VALUE])",
@@ -48,6 +55,11 @@ var runCommand = cli.Command{
 			return fmt.Errorf("failed to parse affinity: %w", err)
 		}
 
+		priorityLevel, matchingPrecedence, err := parseFlowControl(cliCtx.String("runner-flowcontrol"))
+		if err != nil {
+			return fmt.Errorf("failed to parse runner-flowcontrol: %w", err)
+		}
+
 		specs, err := loadRunnerGroupSpec(cliCtx)
 		if err != nil {
 			return fmt.Errorf("failed to load runner group spec: %w", err)
@@ -61,7 +73,8 @@ var runCommand = cli.Command{
 			kubeCfgPath,
 			imgRef,
 			specs[0],
-			affinityLabels,
+			runner.WithRunCmdServerNodeSelectorsOpt(affinityLabels),
+			runner.WithRunCmdRunnerGroupFlowControl(priorityLevel, matchingPrecedence),
 		)
 	},
 }
@@ -85,4 +98,20 @@ func loadRunnerGroupSpec(cliCtx *cli.Context) ([]*types.RunnerGroupSpec, error) 
 		specs = append(specs, spec)
 	}
 	return specs, nil
+}
+
+// parseFlowControl parses PriorityLevel:MatchingPrecedence into string and int.
+func parseFlowControl(value string) (priorityLevel string, matchingPrecedence int, err error) {
+	l, r, ok := strings.Cut(value, ":")
+	if !ok || len(l) == 0 || len(r) == 0 {
+		err = fmt.Errorf("expected PriorityLevel:MatchingPrecedence format, but got %s", value)
+		return
+	}
+
+	priorityLevel = l
+	matchingPrecedence, err = strconv.Atoi(r)
+	if err != nil {
+		err = fmt.Errorf("failed to parse matchingPrecedence into int: %w", err)
+	}
+	return
 }
