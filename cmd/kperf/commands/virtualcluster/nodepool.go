@@ -18,6 +18,7 @@ var nodepoolCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "kubeconfig",
 			Usage: "Path to the kubeconfig file",
+			Value: utils.DefaultKubeConfigPath,
 		},
 	},
 	Subcommands: []cli.Command{

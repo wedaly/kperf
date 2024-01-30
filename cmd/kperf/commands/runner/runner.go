@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/Azure/kperf/api/types"
+	"github.com/Azure/kperf/cmd/kperf/commands/utils"
 	"github.com/Azure/kperf/metrics"
 	"github.com/Azure/kperf/request"
 
@@ -32,6 +33,7 @@ var runCommand = cli.Command{
 		cli.StringFlag{
 			Name:  "kubeconfig",
 			Usage: "Path to the kubeconfig file",
+			Value: utils.DefaultKubeConfigPath,
 		},
 		cli.IntFlag{
 			Name:  "client",
