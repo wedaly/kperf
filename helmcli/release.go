@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -41,6 +41,7 @@ func StringPathValuesApplier(values ...string) ValuesApplier {
 	}
 }
 
+// YAMLValuesApplier applies key/values by YAML.
 func YAMLValuesApplier(yamlValues string) (ValuesApplier, error) {
 	values := make(map[string]interface{})
 	err := yaml.Unmarshal([]byte(yamlValues), &values)
@@ -77,7 +78,6 @@ func applyValues(to, from map[string]interface{}) error {
 			// If 'v' is not of type map[string]interface{}
 			to[k] = v
 		}
-
 	}
 	return nil
 }
