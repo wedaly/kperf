@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Azure/kperf/api/types"
+	"github.com/Azure/kperf/cmd/kperf/commands/utils"
 	"github.com/Azure/kperf/runner"
 	runnergroup "github.com/Azure/kperf/runner/group"
 
@@ -31,11 +32,20 @@ var runCommand = cli.Command{
 			// Right now, we need to set image manually.
 			Required: true,
 		},
+		cli.StringSliceFlag{
+			Name:  "affinity",
+			Usage: "Deploy server to the node with a specific labels (FORMAT: KEY=VALUE[,VALUE])",
+		},
 	},
 	Action: func(cliCtx *cli.Context) error {
 		imgRef := cliCtx.String("runner-image")
 		if len(imgRef) == 0 {
 			return fmt.Errorf("required valid runner image")
+		}
+
+		affinityLabels, err := utils.KeyValuesMap(cliCtx.StringSlice("affinity"))
+		if err != nil {
+			return fmt.Errorf("failed to parse affinity: %w", err)
 		}
 
 		specs, err := loadRunnerGroupSpec(cliCtx)
@@ -51,6 +61,7 @@ var runCommand = cli.Command{
 			kubeCfgPath,
 			imgRef,
 			specs[0],
+			affinityLabels,
 		)
 	},
 }

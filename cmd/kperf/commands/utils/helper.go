@@ -1,12 +1,12 @@
-package virtualcluster
+package utils
 
 import (
 	"fmt"
 	"strings"
 )
 
-// stringSliceToMap converts key=value[,value] into map[string][]string.
-func stringSliceToMap(strs []string) (map[string][]string, error) {
+// KeyValuesMap converts key=value[,value] into map[string][]string.
+func KeyValuesMap(strs []string) (map[string][]string, error) {
 	res := make(map[string][]string, len(strs))
 	for _, str := range strs {
 		key, valuesInStr, ok := strings.Cut(str, "=")

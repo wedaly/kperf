@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/kperf/cmd/kperf/commands/utils"
 	"github.com/Azure/kperf/virtualcluster"
 
 	"github.com/urfave/cli"
@@ -62,7 +63,7 @@ var nodepoolAddCommand = cli.Command{
 
 		kubeCfgPath := cliCtx.String("kubeconfig")
 
-		affinityLabels, err := stringSliceToMap(cliCtx.StringSlice("affinity"))
+		affinityLabels, err := utils.KeyValuesMap(cliCtx.StringSlice("affinity"))
 		if err != nil {
 			return fmt.Errorf("failed to parse affinity: %w", err)
 		}

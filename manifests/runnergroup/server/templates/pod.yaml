@@ -4,6 +4,21 @@ metadata:
   name: {{ .Values.name }}
   namespace: {{ .Release.Namespace }}
 spec:
+{{- if .Values.nodeSelectors }}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+  {{- range $key, $values := .Values.nodeSelectors }}
+          - key: "{{ $key }}"
+            operator: In
+            values:
+    {{- range $values }}
+              - {{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
   containers:
   - name: server
     command:
