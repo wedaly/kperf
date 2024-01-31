@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Azure/kperf/virtualcluster"
+	"helm.sh/helm/v3/pkg/release"
 
 	"github.com/urfave/cli"
 )
@@ -92,6 +93,25 @@ var nodepoolListCommand = cli.Command{
 	Name:  "list",
 	Usage: "List virtual node pools",
 	Action: func(cliCtx *cli.Context) error {
-		return fmt.Errorf("nodepool list - not implemented")
+		kubeCfgPath := cliCtx.String("kubeconfig")
+		nodepools, err := virtualcluster.ListNodepools(context.Background(), kubeCfgPath)
+		if err != nil {
+			return err
+		}
+		return renderRunnerGroups(nodepools)
+
 	},
+}
+
+func renderRunnerGroups(nodepools []*release.Release) error {
+	if len(nodepools) > 0 {
+		fmt.Println("+-------------------+------------+-------------+-------------+------------+")
+		fmt.Printf("| %-17s | %-10s | %-9s | %-11s | %-9s |\n", "Name", "Nodes", "CPU (cores)", "Memory (GiB)", "Status")
+		fmt.Println("+-------------------+------------+-------------+-------------+------------+")
+	}
+	for _, nodepool := range nodepools {
+		fmt.Printf("| %-17s | %-10v | %-12v| %-12v| %-10v |\n", nodepool.Name, nodepool.Config["replicas"], nodepool.Config["cpu"], nodepool.Config["memory"], nodepool.Info.Status)
+		fmt.Println("+-------------------+------------+-------------+-------------+------------+")
+	}
+	return nil
 }
