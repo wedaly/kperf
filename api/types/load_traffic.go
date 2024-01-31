@@ -46,6 +46,10 @@ type LoadProfileSpec struct {
 	ContentType ContentType `json:"contentType" yaml:"contentType"`
 	// DisableHTTP2 means client will use HTTP/1.1 protocol if it's true.
 	DisableHTTP2 bool `json:"disableHTTP2" yaml:"disableHTTP2"`
+	// MaxRetries makes the request use the given integer as a ceiling of
+	// retrying upon receiving "Retry-After" headers and 429 status-code
+	// in the response (<= 0 means no retry).
+	MaxRetries int `json:"maxRetries" yaml:"maxRetries"`
 	// Requests defines the different kinds of requests with weights.
 	// The executor should randomly pick by weight.
 	Requests []*WeightedRequest

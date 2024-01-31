@@ -72,6 +72,11 @@ var runCommand = cli.Command{
 			Name:  "disable-http2",
 			Usage: "Disable HTTP2 protocol",
 		},
+		cli.IntFlag{
+			Name:  "max-retries",
+			Usage: "Retry request after receiving 429 http code (<=0 means no retry)",
+			Value: 0,
+		},
 		cli.StringFlag{
 			Name:  "result",
 			Usage: "Path to the file which stores results",
@@ -169,6 +174,9 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 	}
 	if v := "disable-http2"; cliCtx.IsSet(v) {
 		profileCfg.Spec.DisableHTTP2 = cliCtx.Bool(v)
+	}
+	if v := "max-retries"; cliCtx.IsSet(v) {
+		profileCfg.Spec.MaxRetries = cliCtx.Int(v)
 	}
 
 	if err := profileCfg.Validate(); err != nil {
