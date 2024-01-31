@@ -59,7 +59,6 @@ loadProfile:
           version: v1
           resource: pods
           limit: 1000
-        shares: 1000
         shares: 1000 # Has 50% chance = 1000 / (1000 + 1000)
 
 # nodeAffinity defines how to deploy runners into dedicated nodes which have specific labels.
