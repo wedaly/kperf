@@ -21,7 +21,7 @@ type ResponseErrorStats struct {
 	// UnknownErrors is all unknown errors.
 	UnknownErrors []string `json:"unknownErrors"`
 	// NetErrors is to track errors from net.
-	NetErrors map[string]int32 `json:"netErrors,omitempty"`
+	NetErrors map[string]int32 `json:"netErrors"`
 	// ResponseCodes records request number grouped by response
 	// code between 400 and 600.
 	ResponseCodes map[int]int32 `json:"responseCodes"`
@@ -55,6 +55,7 @@ func (r *ResponseErrorStats) Copy() ResponseErrorStats {
 func (r *ResponseErrorStats) Merge(from *ResponseErrorStats) {
 	r.UnknownErrors = append(r.UnknownErrors, from.UnknownErrors...)
 	mergeMap(r.NetErrors, from.NetErrors)
+	mergeMap(r.ResponseCodes, from.ResponseCodes)
 	mergeMap(r.HTTP2Errors.ConnectionErrors, from.HTTP2Errors.ConnectionErrors)
 	mergeMap(r.HTTP2Errors.StreamErrors, from.HTTP2Errors.StreamErrors)
 }
