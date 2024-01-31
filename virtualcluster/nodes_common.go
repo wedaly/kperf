@@ -2,8 +2,10 @@ package virtualcluster
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Azure/kperf/helmcli"
+
 	"sigs.k8s.io/yaml"
 )
 
@@ -25,15 +27,25 @@ const (
 	// virtualnodeChartName should be aligned with ../manifests/virtualcluster/nodes.
 	virtualnodeChartName = "virtualcluster/nodes"
 
+	// virtualnodeControllerChartName should be aligned with ../manifests/virtualcluster/nodecontrollers.
+	virtualnodeControllerChartName = "virtualcluster/nodecontrollers"
+
 	// virtualnodeReleaseNamespace is used to host virtual nodes.
 	//
 	// NOTE: The Node resource is cluster-scope. Just in case that new node
 	// name is conflict with existing one, we should use fixed namespace
 	// to store all the resources related to virtual nodes.
 	virtualnodeReleaseNamespace = "virtualnodes-kperf-io"
+
+	// reservedNodepoolSuffixName is used to render virtualnodes/nodecontrollers.
+	//
+	// NOTE: Please check the details in ./nodes_create.go.
+	reservedNodepoolSuffixName = "-controller"
 )
 
 type nodepoolConfig struct {
+	// name represents the name of node pool.
+	name string
 	// count represents the desired number of node.
 	count int
 	// cpu represents a logical CPU resource provided by virtual node.
@@ -52,7 +64,23 @@ func (cfg *nodepoolConfig) validate() error {
 		return fmt.Errorf("invalid count=%d or cpu=%d or memory=%d",
 			cfg.count, cfg.cpu, cfg.memory)
 	}
+
+	if cfg.name == "" {
+		return fmt.Errorf("required non-empty name")
+	}
+
+	if strings.HasSuffix(cfg.name, reservedNodepoolSuffixName) {
+		return fmt.Errorf("name can't contain %s as suffix", reservedNodepoolSuffixName)
+	}
 	return nil
+}
+
+func (cfg *nodepoolConfig) nodeHelmReleaseName() string {
+	return cfg.name
+}
+
+func (cfg *nodepoolConfig) nodeControllerHelmReleaseName() string {
+	return cfg.name + reservedNodepoolSuffixName
 }
 
 // NodepoolOpt is used to update default node pool's setting.
@@ -94,22 +122,31 @@ func WithNodepoolNodeControllerAffinity(nodeSelectors map[string][]string) Nodep
 	}
 }
 
-// toHelmValuesAppliers creates ValuesAppliers.
+// toNodeHelmValuesAppliers creates ValuesAppliers.
 //
 // NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
-//
-// TODO: Add YAML ValuesAppliers to support array type.
-func (cfg *nodepoolConfig) toHelmValuesAppliers(nodepoolName string) ([]helmcli.ValuesApplier, error) {
+func (cfg *nodepoolConfig) toNodeHelmValuesAppliers() []helmcli.ValuesApplier {
 	res := make([]string, 0, 4)
 
-	res = append(res, fmt.Sprintf("name=%s", nodepoolName))
-	res = append(res, fmt.Sprintf("replicas=%d", cfg.count))
+	res = append(res, fmt.Sprintf("name=%s", cfg.name))
 	res = append(res, fmt.Sprintf("cpu=%d", cfg.cpu))
 	res = append(res, fmt.Sprintf("memory=%d", cfg.memory))
+	res = append(res, fmt.Sprintf("replicas=%d", cfg.count))
+
+	return []helmcli.ValuesApplier{helmcli.StringPathValuesApplier(res...)}
+}
+
+// toNodeControllerHelmValuesAppliers creates ValuesAppliers.
+//
+// NOTE: Please align with ../manifests/virtualcluster/nodecontrollers/values.yaml
+func (cfg *nodepoolConfig) toNodeControllerHelmValuesAppliers() ([]helmcli.ValuesApplier, error) {
+	res := make([]string, 0, 2)
+
+	res = append(res, fmt.Sprintf("name=%s", cfg.name))
+	res = append(res, fmt.Sprintf("replicas=%d", cfg.count))
 
 	stringPathApplier := helmcli.StringPathValuesApplier(res...)
-
-	nodeSelectorsYaml, err := cfg.renderNodeSelectors()
+	nodeSelectorsYaml, err := cfg.renderNodeControllerNodeSelectors()
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +158,13 @@ func (cfg *nodepoolConfig) toHelmValuesAppliers(nodepoolName string) ([]helmcli.
 	return []helmcli.ValuesApplier{stringPathApplier, nodeSelectorsApplier}, nil
 }
 
-// renderNodeSelectors renders nodeSelectors config into YAML string.
+// renderNodeControllerNodeSelectors renders node controller's nodeSelectors
+// config into YAML string.
 //
-// NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
-func (cfg *nodepoolConfig) renderNodeSelectors() (string, error) {
+// NOTE: Please align with ../manifests/virtualcluster/nodecontrollers/values.yaml
+func (cfg *nodepoolConfig) renderNodeControllerNodeSelectors() (string, error) {
 	target := map[string]interface{}{
-		"controllerNodeSelectors": cfg.nodeSelectors,
+		"nodeSelectors": cfg.nodeSelectors,
 	}
 
 	rawData, err := yaml.Marshal(target)

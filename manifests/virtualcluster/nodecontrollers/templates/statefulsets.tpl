@@ -14,13 +14,13 @@ spec:
       labels:
         app: {{ .Values.name }}
     spec:
-{{- if .Values.controllerNodeSelectors }}
+{{- if .Values.nodeSelectors }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-  {{- range $key, $values := .Values.controllerNodeSelectors }}
+  {{- range $key, $values := .Values.nodeSelectors }}
               - key: "{{ $key }}"
                 operator: In
                 values:
