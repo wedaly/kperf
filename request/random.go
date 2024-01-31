@@ -41,13 +41,13 @@ func NewWeightedRandomRequests(spec *types.LoadProfileSpec) (*WeightedRandomRequ
 		var builder RESTRequestBuilder
 		switch {
 		case r.StaleList != nil:
-			builder = newRequestListBuilder(r.StaleList, "0")
+			builder = newRequestListBuilder(r.StaleList, "0", spec.MaxRetries)
 		case r.QuorumList != nil:
-			builder = newRequestListBuilder(r.QuorumList, "")
+			builder = newRequestListBuilder(r.QuorumList, "", spec.MaxRetries)
 		case r.StaleGet != nil:
-			builder = newRequestGetBuilder(r.StaleGet, "0")
+			builder = newRequestGetBuilder(r.StaleGet, "0", spec.MaxRetries)
 		case r.QuorumGet != nil:
-			builder = newRequestGetBuilder(r.QuorumGet, "")
+			builder = newRequestGetBuilder(r.QuorumGet, "", spec.MaxRetries)
 		default:
 			return nil, fmt.Errorf("not implement for PUT yet")
 		}
@@ -130,9 +130,10 @@ type requestGetBuilder struct {
 	namespace       string
 	name            string
 	resourceVersion string
+	maxRetries      int
 }
 
-func newRequestGetBuilder(src *types.RequestGet, resourceVersion string) *requestGetBuilder {
+func newRequestGetBuilder(src *types.RequestGet, resourceVersion string, maxRetries int) *requestGetBuilder {
 	return &requestGetBuilder{
 		version: schema.GroupVersion{
 			Group:   src.Group,
@@ -142,6 +143,7 @@ func newRequestGetBuilder(src *types.RequestGet, resourceVersion string) *reques
 		namespace:       src.Namespace,
 		name:            src.Name,
 		resourceVersion: resourceVersion,
+		maxRetries:      maxRetries,
 	}
 }
 
@@ -165,7 +167,7 @@ func (b *requestGetBuilder) Build(cli rest.Interface) (string, *rest.Request) {
 			&metav1.GetOptions{ResourceVersion: b.resourceVersion},
 			scheme.ParameterCodec,
 			schema.GroupVersion{Version: "v1"},
-		)
+		).MaxRetries(b.maxRetries)
 }
 
 type requestListBuilder struct {
@@ -175,9 +177,10 @@ type requestListBuilder struct {
 	limit           int64
 	labelSelector   string
 	resourceVersion string
+	maxRetries      int
 }
 
-func newRequestListBuilder(src *types.RequestList, resourceVersion string) *requestListBuilder {
+func newRequestListBuilder(src *types.RequestList, resourceVersion string, maxRetries int) *requestListBuilder {
 	return &requestListBuilder{
 		version: schema.GroupVersion{
 			Group:   src.Group,
@@ -188,6 +191,7 @@ func newRequestListBuilder(src *types.RequestList, resourceVersion string) *requ
 		limit:           int64(src.Limit),
 		labelSelector:   src.Selector,
 		resourceVersion: resourceVersion,
+		maxRetries:      maxRetries,
 	}
 }
 
@@ -215,5 +219,5 @@ func (b *requestListBuilder) Build(cli rest.Interface) (string, *rest.Request) {
 			},
 			scheme.ParameterCodec,
 			schema.GroupVersion{Version: "v1"},
-		)
+		).MaxRetries(b.maxRetries)
 }
