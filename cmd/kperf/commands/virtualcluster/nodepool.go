@@ -3,7 +3,9 @@ package virtualcluster
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/Azure/kperf/cmd/kperf/commands/utils"
 	"github.com/Azure/kperf/virtualcluster"
@@ -122,14 +124,19 @@ var nodepoolListCommand = cli.Command{
 }
 
 func renderRunnerGroups(nodepools []*release.Release) error {
-	if len(nodepools) > 0 {
-		fmt.Println("+-------------------+------------+-------------+-------------+------------+")
-		fmt.Printf("| %-17s | %-10s | %-9s | %-11s | %-9s |\n", "Name", "Nodes", "CPU (cores)", "Memory (GiB)", "Status")
-		fmt.Println("+-------------------+------------+-------------+-------------+------------+")
-	}
+	tw := tabwriter.NewWriter(os.Stdout, 1, 12, 3, ' ', 0)
+
+	fmt.Fprintln(tw, "NAME\tNODES\tCPU\tMEMORY (GiB)\tMAX PODS\tSTATUS\t")
 	for _, nodepool := range nodepools {
-		fmt.Printf("| %-17s | %-10v | %-12v| %-12v| %-10v |\n", nodepool.Name, nodepool.Config["replicas"], nodepool.Config["cpu"], nodepool.Config["memory"], nodepool.Info.Status)
-		fmt.Println("+-------------------+------------+-------------+-------------+------------+")
+		fmt.Fprintf(tw, "%s\t%v\t%v\t%v\t%v\t%s\t\n",
+			nodepool.Name,
+			// TODO(weifu): show the number of read nodes
+			fmt.Sprintf("? / %v", nodepool.Config["replicas"]),
+			nodepool.Config["cpu"],
+			nodepool.Config["memory"],
+			nodepool.Config["maxPods"],
+			nodepool.Info.Status,
+		)
 	}
-	return nil
+	return tw.Flush()
 }
