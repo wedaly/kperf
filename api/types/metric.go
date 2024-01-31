@@ -33,7 +33,7 @@ type ResponseErrorStats struct {
 func NewResponseErrorStats() *ResponseErrorStats {
 	return &ResponseErrorStats{
 		UnknownErrors: make([]string, 0, 1024),
-		NetErrors:     map[string]int32{},
+		NetErrors:     make(map[string]int32, 10),
 		ResponseCodes: map[int]int32{},
 		HTTP2Errors:   *NewHTTP2ErrorStats(),
 	}
