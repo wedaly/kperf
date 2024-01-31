@@ -3,3 +3,4 @@ nodeLabels: {}
 replicas: 0
 cpu: 0
 memory: 0
+maxPods: 0

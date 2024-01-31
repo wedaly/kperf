@@ -1,6 +1,7 @@
 {{- $name := .Values.name }}
 {{- $cpu := .Values.cpu  }}
 {{- $memory := .Values.memory }}
+{{- $maxPods := .Values.maxPods }}
 {{- $labels := .Values.nodeLabels }}
 {{- range $index := (untilStep 0 (int .Values.replicas) 1) }}
 apiVersion: v1
@@ -35,11 +36,11 @@ status:
   allocatable:
     cpu: {{ $cpu }}
     memory: {{ $memory }}Gi
-    pods: 110
+    pods: {{ $maxPods }}
   capacity:
     cpu: {{ $cpu }}
     memory: {{ $memory }}Gi
-    pods: 110
+    pods: {{ $maxPods }}
   nodeInfo:
     architecture: amd64
     containerRuntimeVersion: "kwok"
