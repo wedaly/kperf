@@ -43,6 +43,7 @@ func NewResponseErrorStats() *ResponseErrorStats {
 func (r *ResponseErrorStats) Copy() ResponseErrorStats {
 	res := NewResponseErrorStats()
 
+	res.UnknownErrors = make([]string, len(r.UnknownErrors))
 	copy(res.UnknownErrors, r.UnknownErrors)
 	res.NetErrors = cloneMap(r.NetErrors)
 	res.ResponseCodes = cloneMap(r.ResponseCodes)
