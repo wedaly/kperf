@@ -126,6 +126,8 @@ func updateNetErrors(stats *types.ResponseErrorStats, err error) {
 			stats.NetErrors[errNetIOTimeout.Error()]++
 		case strings.Contains(errInStr, errTLSHandshakeTimeout.Error()):
 			stats.NetErrors[errTLSHandshakeTimeout.Error()]++
+		default:
+			stats.NetErrors[err.Error()]++
 		}
 	case errors.Is(err, io.ErrUnexpectedEOF):
 		stats.NetErrors[io.ErrUnexpectedEOF.Error()]++
