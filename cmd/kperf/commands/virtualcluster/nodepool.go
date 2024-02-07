@@ -70,7 +70,7 @@ var nodepoolAddCommand = cli.Command{
 			return fmt.Errorf("required non-empty nodepool name")
 		}
 
-		kubeCfgPath := cliCtx.String("kubeconfig")
+		kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
 		affinityLabels, err := utils.KeyValuesMap(cliCtx.StringSlice("affinity"))
 		if err != nil {
@@ -103,7 +103,7 @@ var nodepoolDelCommand = cli.Command{
 			return fmt.Errorf("required non-empty nodepool name")
 		}
 
-		kubeCfgPath := cliCtx.String("kubeconfig")
+		kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
 		return virtualcluster.DeleteNodepool(context.Background(), kubeCfgPath, nodepoolName)
 	},
@@ -113,7 +113,7 @@ var nodepoolListCommand = cli.Command{
 	Name:  "list",
 	Usage: "List virtual node pools",
 	Action: func(cliCtx *cli.Context) error {
-		kubeCfgPath := cliCtx.String("kubeconfig")
+		kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 		nodepools, err := virtualcluster.ListNodepools(context.Background(), kubeCfgPath)
 		if err != nil {
 			return err
