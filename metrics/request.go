@@ -2,8 +2,6 @@ package metrics
 
 import (
 	"container/list"
-	"errors"
-	"io"
 	"sync"
 	"sync/atomic"
 
@@ -59,7 +57,7 @@ func (m *responseMetricImpl) ObserveFailure(err error) {
 		m.errorStats.ResponseCodes[code]++
 	case isHTTP2Error(err):
 		updateHTTP2ErrorStats(m.errorStats, err)
-	case isDialTimeoutError(err) || errors.Is(err, io.ErrUnexpectedEOF) || isConnectionRefused(err):
+	case isNetRelatedError(err):
 		updateNetErrors(m.errorStats, err)
 	default:
 		m.errorStats.UnknownErrors = append(m.errorStats.UnknownErrors, err.Error())
