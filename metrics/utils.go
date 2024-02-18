@@ -1,8 +1,8 @@
 package metrics
 
 import (
-	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"net"
@@ -45,9 +45,6 @@ var (
 
 	// errTLSHandshakeTimeout is used to track unexported tlsHandshakeTimeoutError from net/http.
 	errTLSHandshakeTimeout = errors.New("net/http: TLS handshake timeout")
-
-	// errNetIOTimeout is used to track unexported errTimeout from net.
-	errNetIOTimeout = errors.New("i/o timeout")
 )
 
 // codeFromHTTP parses error to get http code.
@@ -107,6 +104,11 @@ func updateHTTP2ErrorStats(stats *types.ResponseErrorStats, err error) {
 		return
 	}
 
+	if connErr, ok := err.(http2.GoAwayError); ok || errors.As(err, &connErr) {
+		stats.HTTP2Errors.ConnectionErrors[fmt.Sprintf("http2: server sent GOAWAY and closed the connection; ErrCode=%v, debug=%q", connErr.ErrCode, connErr.DebugData)]++
+		return
+	}
+
 	if strings.Contains(err.Error(), errHTTP2ClientConnectionLost.Error()) {
 		stats.HTTP2Errors.ConnectionErrors[errHTTP2ClientConnectionLost.Error()]++
 	}
@@ -120,19 +122,16 @@ func updateNetErrors(stats *types.ResponseErrorStats, err error) {
 
 	errInStr := err.Error()
 	switch {
-	case isDialTimeoutError(err):
-		switch {
-		case errors.Is(err, context.DeadlineExceeded):
-			stats.NetErrors[errNetIOTimeout.Error()]++
-		case strings.Contains(errInStr, errTLSHandshakeTimeout.Error()):
-			stats.NetErrors[errTLSHandshakeTimeout.Error()]++
-		default:
-			stats.NetErrors[err.Error()]++
-		}
+	case isTimeoutError(err):
+		stats.NetErrors[err.Error()]++
 	case errors.Is(err, io.ErrUnexpectedEOF):
 		stats.NetErrors[io.ErrUnexpectedEOF.Error()]++
 	case isConnectionRefused(err):
 		stats.NetErrors[syscall.ECONNREFUSED.Error()]++
+	case isConnectionResetByPeer(err):
+		stats.NetErrors[syscall.ECONNRESET.Error()]++
+	case strings.Contains(errInStr, errTLSHandshakeTimeout.Error()):
+		stats.NetErrors[errTLSHandshakeTimeout.Error()]++
 	default:
 		// TODO(weifu): add more categories.
 	}
@@ -152,25 +151,39 @@ func isHTTP2Error(err error) bool {
 		return true
 	}
 
+	if connErr, ok := err.(http2.GoAwayError); ok || errors.As(err, &connErr) {
+		return true
+	}
+
 	if strings.Contains(err.Error(), errHTTP2ClientConnectionLost.Error()) {
 		return true
 	}
 	return false
 }
 
-// isDialTimeoutError returns true if it's related to golang standard library
+// isNetRelatedError returns true if it's related to net error.
+func isNetRelatedError(err error) bool {
+	return err != nil && (isTimeoutError(err) ||
+		isConnectionRefused(err) ||
+		isConnectionResetByPeer(err) ||
+		errors.Is(err, io.ErrUnexpectedEOF) ||
+		strings.Contains(err.Error(), errTLSHandshakeTimeout.Error()))
+}
+
+// isTimeoutError returns true if it's related to golang standard library
 // net's timeout error.
-func isDialTimeoutError(err error) bool {
+func isTimeoutError(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	err = errors.Unwrap(err)
 	terr, ok := err.(net.Error)
-	if !ok || !terr.Timeout() {
-		return false
+	if !ok {
+		if !errors.As(err, &terr) {
+			return false
+		}
 	}
-	return true
+	return terr.Timeout()
 }
 
 // isConnectionRefused returns true if the error is connection refused
@@ -182,6 +195,19 @@ func isConnectionRefused(err error) bool {
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
 		return errno == syscall.ECONNREFUSED
+	}
+	return false
+}
+
+// isConnectionResetByPeer returns true if the error is "connection reset by peer".
+func isConnectionResetByPeer(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		return errno == syscall.ECONNRESET
 	}
 	return false
 }
