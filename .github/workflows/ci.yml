@@ -34,3 +34,5 @@ jobs:
           go-version: "1.21"
       - name: build
         run: make build
+      - name: image-build
+        run: make image-build
