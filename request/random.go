@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/kperf/api/types"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -48,6 +49,8 @@ func NewWeightedRandomRequests(spec *types.LoadProfileSpec) (*WeightedRandomRequ
 			builder = newRequestGetBuilder(r.StaleGet, "0", spec.MaxRetries)
 		case r.QuorumGet != nil:
 			builder = newRequestGetBuilder(r.QuorumGet, "", spec.MaxRetries)
+		case r.GetPodLog != nil:
+			builder = newRequestGetPodLogBuilder(r.GetPodLog, spec.MaxRetries)
 		default:
 			return nil, fmt.Errorf("not implement for PUT yet")
 		}
@@ -220,4 +223,55 @@ func (b *requestListBuilder) Build(cli rest.Interface) (string, *rest.Request) {
 			scheme.ParameterCodec,
 			schema.GroupVersion{Version: "v1"},
 		).MaxRetries(b.maxRetries)
+}
+
+type requestGetPodLogBuilder struct {
+	namespace  string
+	name       string
+	container  string
+	tailLines  *int64
+	limitBytes *int64
+	maxRetries int
+}
+
+func newRequestGetPodLogBuilder(src *types.RequestGetPodLog, maxRetries int) *requestGetPodLogBuilder {
+	b := &requestGetPodLogBuilder{
+		namespace:  src.Namespace,
+		name:       src.Name,
+		container:  src.Container,
+		maxRetries: maxRetries,
+	}
+	if src.TailLines != nil {
+		b.tailLines = toPtr(*src.TailLines)
+	}
+	if src.LimitBytes != nil {
+		b.limitBytes = toPtr(*src.LimitBytes)
+	}
+	return b
+}
+
+// Build implements RequestBuilder.Build.
+func (b *requestGetPodLogBuilder) Build(cli rest.Interface) (string, *rest.Request) {
+	// https://kubernetes.io/docs/reference/using-api/#api-groups
+	apiPath, version := "api", "v1"
+
+	comps := make([]string, 2, 7)
+	comps[0], comps[1] = apiPath, version
+	comps = append(comps, "namespaces", b.namespace)
+	comps = append(comps, "pods", b.name, "log")
+
+	return "POD_LOG", cli.Get().AbsPath(comps...).
+		SpecificallyVersionedParams(
+			&corev1.PodLogOptions{
+				Container:  b.container,
+				TailLines:  b.tailLines,
+				LimitBytes: b.limitBytes,
+			},
+			scheme.ParameterCodec,
+			schema.GroupVersion{Version: "v1"},
+		).MaxRetries(b.maxRetries)
+}
+
+func toPtr[T any](v T) *T {
+	return &v
 }

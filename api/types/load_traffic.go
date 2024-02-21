@@ -80,6 +80,8 @@ type WeightedRequest struct {
 	QuorumGet *RequestGet `json:"quorumGet,omitempty" yaml:"quorumGet,omitempty"`
 	// Put means this is mutating request.
 	Put *RequestPut `json:"put,omitempty" yaml:"put,omitempty"`
+	// GetPodLog means this is to get log from target pod.
+	GetPodLog *RequestGetPodLog `json:"getPodLog,omitempty" yaml:"getPodLog,omitempty"`
 }
 
 // RequestGet defines GET request for target object.
@@ -122,6 +124,23 @@ type RequestPut struct {
 	KeySpaceSize int `json:"keySpaceSize" yaml:"keySpaceSize"`
 	// ValueSize is the object's size in bytes.
 	ValueSize int `json:"valueSize" yaml:"valueSize"`
+}
+
+// RequestGetPodLog defines GetLog request for target pod.
+type RequestGetPodLog struct {
+	// Namespace is pod's namespace.
+	Namespace string `json:"namespace" yaml:"namespace"`
+	// Name is pod's name.
+	Name string `json:"name" yaml:"name"`
+	// Container is target for stream logs. If empty, it's only valid
+	// when there is only one container.
+	Container string `json:"container" yaml:"container"`
+	// TailLines is the number of lines from the end of the logs to show,
+	// if set.
+	TailLines *int64 `json:"tailLines" yaml:"tailLines"`
+	// LimitBytes is the number of bytes to read from the server before
+	// terminating the log output, if set.
+	LimitBytes *int64 `json:"limitBytes" yaml:"limitBytes"`
 }
 
 // Validate verifies fields of LoadProfile.
@@ -180,6 +199,8 @@ func (r WeightedRequest) Validate() error {
 		return r.QuorumGet.Validate()
 	case r.Put != nil:
 		return r.Put.Validate()
+	case r.GetPodLog != nil:
+		return r.GetPodLog.Validate()
 	default:
 		return fmt.Errorf("empty request value")
 	}
@@ -224,6 +245,17 @@ func (r *RequestPut) Validate() error {
 	}
 	if r.ValueSize <= 0 {
 		return fmt.Errorf("valueSize must > 0")
+	}
+	return nil
+}
+
+// Validate validates RequestGetPodLog type.
+func (r *RequestGetPodLog) Validate() error {
+	if r.Namespace == "" {
+		return fmt.Errorf("namespace is required")
+	}
+	if r.Name == "" {
+		return fmt.Errorf("name is required")
 	}
 	return nil
 }

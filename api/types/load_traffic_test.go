@@ -56,6 +56,13 @@ spec:
       keySpaceSize: 1000
       valueSize: 1024
     shares: 1000
+  - getPodLog:
+      namespace: default
+      name: hello
+      container: main
+      tailLines: 1000
+      limitBytes: 1024
+    shares: 10
 `
 
 	target := LoadProfile{}
@@ -65,7 +72,7 @@ spec:
 	assert.Equal(t, float64(100), target.Spec.Rate)
 	assert.Equal(t, 10000, target.Spec.Total)
 	assert.Equal(t, 2, target.Spec.Conns)
-	assert.Len(t, target.Spec.Requests, 5)
+	assert.Len(t, target.Spec.Requests, 6)
 
 	assert.Equal(t, 100, target.Spec.Requests[0].Shares)
 	assert.NotNil(t, target.Spec.Requests[0].StaleGet)
@@ -99,6 +106,14 @@ spec:
 	assert.Equal(t, "kperf-", target.Spec.Requests[4].Put.Name)
 	assert.Equal(t, 1000, target.Spec.Requests[4].Put.KeySpaceSize)
 	assert.Equal(t, 1024, target.Spec.Requests[4].Put.ValueSize)
+
+	assert.Equal(t, 10, target.Spec.Requests[5].Shares)
+	assert.NotNil(t, target.Spec.Requests[5].GetPodLog)
+	assert.Equal(t, "default", target.Spec.Requests[5].GetPodLog.Namespace)
+	assert.Equal(t, "hello", target.Spec.Requests[5].GetPodLog.Name)
+	assert.Equal(t, "main", target.Spec.Requests[5].GetPodLog.Container)
+	assert.Equal(t, int64(1000), *target.Spec.Requests[5].GetPodLog.TailLines)
+	assert.Equal(t, int64(1024), *target.Spec.Requests[5].GetPodLog.LimitBytes)
 }
 
 func TestWeightedRequest(t *testing.T) {
