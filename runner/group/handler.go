@@ -284,7 +284,9 @@ func (h *Handler) Wait(ctx context.Context) error {
 		if err != nil {
 			switch {
 			case apierrors.IsResourceExpired(err) || apierrors.IsGone(err):
+				klog.V(2).Infof("reset last seen revision and continue, since receive: %v", err)
 				lastRv = ""
+				continue
 			// should retry if apiserver is down or unavailable.
 			case apierrors.IsTooManyRequests(err) || apierrors.IsInternalError(err):
 				<-backoff.Backoff().C()
