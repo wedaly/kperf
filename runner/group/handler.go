@@ -337,9 +337,8 @@ func (h *Handler) waitForJob(ctx context.Context, w watch.Interface, rv *string)
 				if jobFinished(job) {
 					return nil
 				}
-			case watch.Bookmark:
 			default:
-				return fmt.Errorf("unexpected event type %s", event.Type)
+				klog.V(2).Infof("receive event type %s", event.Type)
 			}
 			*rv = job.ResourceVersion
 		}
