@@ -284,7 +284,9 @@ func (h *Handler) Wait(ctx context.Context) error {
 		if err != nil {
 			switch {
 			case apierrors.IsResourceExpired(err) || apierrors.IsGone(err):
+				klog.V(2).Infof("reset last seen revision and continue, since receive: %v", err)
 				lastRv = ""
+				continue
 			// should retry if apiserver is down or unavailable.
 			case apierrors.IsTooManyRequests(err) || apierrors.IsInternalError(err):
 				<-backoff.Backoff().C()
@@ -335,9 +337,8 @@ func (h *Handler) waitForJob(ctx context.Context, w watch.Interface, rv *string)
 				if jobFinished(job) {
 					return nil
 				}
-			case watch.Bookmark:
 			default:
-				return fmt.Errorf("unexpected event type %s", event.Type)
+				klog.V(2).Infof("receive event type %s", event.Type)
 			}
 			*rv = job.ResourceVersion
 		}
