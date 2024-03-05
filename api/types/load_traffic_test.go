@@ -16,6 +16,8 @@ spec:
   rate: 100
   total: 10000
   conns: 2
+  client: 1
+  contentType: json
   requests:
   - staleGet:
       group: core
@@ -36,7 +38,6 @@ spec:
       version: v1
       resource: pods
       namespace: default
-      limit: 10000
       seletor: app=x2
     shares: 200
   - quorumList:
@@ -91,7 +92,7 @@ spec:
 	assert.Equal(t, "v1", target.Spec.Requests[2].StaleList.Version)
 	assert.Equal(t, "core", target.Spec.Requests[0].StaleGet.Group)
 	assert.Equal(t, "default", target.Spec.Requests[2].StaleList.Namespace)
-	assert.Equal(t, 10000, target.Spec.Requests[2].StaleList.Limit)
+	assert.Equal(t, 0, target.Spec.Requests[2].StaleList.Limit)
 	assert.Equal(t, "app=x2", target.Spec.Requests[2].StaleList.Selector)
 
 	assert.NotNil(t, target.Spec.Requests[3].QuorumList)
@@ -114,6 +115,8 @@ spec:
 	assert.Equal(t, "main", target.Spec.Requests[5].GetPodLog.Container)
 	assert.Equal(t, int64(1000), *target.Spec.Requests[5].GetPodLog.TailLines)
 	assert.Equal(t, int64(1024), *target.Spec.Requests[5].GetPodLog.LimitBytes)
+
+	assert.NoError(t, target.Validate())
 }
 
 func TestWeightedRequest(t *testing.T) {

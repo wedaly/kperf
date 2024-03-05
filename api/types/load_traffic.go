@@ -190,9 +190,9 @@ func (r WeightedRequest) Validate() error {
 
 	switch {
 	case r.StaleList != nil:
-		return r.StaleList.Validate()
+		return r.StaleList.Validate(true)
 	case r.QuorumList != nil:
-		return r.QuorumList.Validate()
+		return r.QuorumList.Validate(false)
 	case r.StaleGet != nil:
 		return r.StaleGet.Validate()
 	case r.QuorumGet != nil:
@@ -207,13 +207,17 @@ func (r WeightedRequest) Validate() error {
 }
 
 // RequestList validates RequestList type.
-func (r *RequestList) Validate() error {
+func (r *RequestList) Validate(stale bool) error {
 	if err := r.KubeGroupVersionResource.Validate(); err != nil {
 		return fmt.Errorf("kube metadata: %v", err)
 	}
 
 	if r.Limit < 0 {
 		return fmt.Errorf("limit must >= 0")
+	}
+
+	if stale && r.Limit != 0 {
+		return fmt.Errorf("stale list doesn't support pagination option: https://github.com/kubernetes/kubernetes/issues/108003")
 	}
 	return nil
 }
