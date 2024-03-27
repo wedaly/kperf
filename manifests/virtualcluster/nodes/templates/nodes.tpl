@@ -3,6 +3,7 @@
 {{- $memory := .Values.memory }}
 {{- $maxPods := .Values.maxPods }}
 {{- $labels := .Values.nodeLabels }}
+{{- $sharedProviderID := .Values.sharedProviderID }}
 {{- range $index := (untilStep 0 (int .Values.replicas) 1) }}
 apiVersion: v1
 kind: Node
@@ -32,6 +33,9 @@ spec:
   - effect: NoSchedule
     key: kperf.io/nodepool
     value: fake
+{{- if $sharedProviderID }}
+  providerID: {{ $sharedProviderID }}
+{{- end}}
 status:
   allocatable:
     cpu: {{ $cpu }}
