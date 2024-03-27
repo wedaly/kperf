@@ -60,6 +60,15 @@ var nodepoolAddCommand = cli.Command{
 			Name:  "affinity",
 			Usage: "Deploy controllers to the nodes with a specific labels (FORMAT: KEY=VALUE[,VALUE])",
 		},
+		cli.StringSliceFlag{
+			Name:  "node-labels",
+			Usage: "Additional labels to node (FORMAT: KEY=VALUE)",
+		},
+		cli.StringFlag{
+			Name:   "shared-provider-id",
+			Usage:  "Force all the virtual nodes using one provider ID",
+			Hidden: true,
+		},
 	},
 	Action: func(cliCtx *cli.Context) error {
 		if cliCtx.NArg() != 1 {
@@ -77,6 +86,11 @@ var nodepoolAddCommand = cli.Command{
 			return fmt.Errorf("failed to parse affinity: %w", err)
 		}
 
+		nodeLabels, err := utils.KeyValueMap(cliCtx.StringSlice("node-labels"))
+		if err != nil {
+			return fmt.Errorf("failed to parse node-labels: %w", err)
+		}
+
 		return virtualcluster.CreateNodepool(context.Background(),
 			kubeCfgPath,
 			nodepoolName,
@@ -85,6 +99,8 @@ var nodepoolAddCommand = cli.Command{
 			virtualcluster.WithNodepoolCountOpt(cliCtx.Int("nodes")),
 			virtualcluster.WithNodepoolMaxPodsOpt(cliCtx.Int("max-pods")),
 			virtualcluster.WithNodepoolNodeControllerAffinity(affinityLabels),
+			virtualcluster.WithNodepoolLabelsOpt(nodeLabels),
+			virtualcluster.WithNodepoolSharedProviderID(cliCtx.String("shared-provider-id")),
 		)
 	},
 }

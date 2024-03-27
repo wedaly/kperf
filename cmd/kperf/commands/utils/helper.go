@@ -34,6 +34,19 @@ func KeyValuesMap(strs []string) (map[string][]string, error) {
 	return res, nil
 }
 
+// KeyValuesMap converts key=value into map[string]string.
+func KeyValueMap(strs []string) (map[string]string, error) {
+	res := make(map[string]string, len(strs))
+	for _, str := range strs {
+		key, value, ok := strings.Cut(str, "=")
+		if !ok {
+			return nil, fmt.Errorf("expected key=value format, but got %s", str)
+		}
+		res[key] = value
+	}
+	return res, nil
+}
+
 // inCluster is to check if current process is in pod.
 func inCluster() bool {
 	f, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token")

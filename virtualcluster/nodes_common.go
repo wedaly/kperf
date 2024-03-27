@@ -57,7 +57,16 @@ type nodepoolConfig struct {
 	// maxPods represents maximum Pods per node.
 	maxPods int
 	// labels is to be applied to each virtual node.
-	labels []string
+	labels map[string]string
+	// sharedProviderID is to force all the virtual nodes sharing one providerID.
+	//
+	// FIXME(weifu):
+	//
+	// EKS cloud provider will delete all the non-ready virtual nodes
+	// if they aren't managed by their cloud provider. The sharedProviderID
+	// can be linked to existing node provided by EKS so that cloud provider
+	// won't delete the virtual nodes. It's hack.
+	sharedProviderID string
 	// nodeSelectors forces virtual node's controller to nodes with that specific labels.
 	nodeSelectors map[string][]string
 }
@@ -122,7 +131,7 @@ func WithNodepoolMaxPodsOpt(maxPods int) NodepoolOpt {
 }
 
 // WithNodepoolLabelsOpt updates node's labels.
-func WithNodepoolLabelsOpt(labels []string) NodepoolOpt {
+func WithNodepoolLabelsOpt(labels map[string]string) NodepoolOpt {
 	return func(cfg *nodepoolConfig) {
 		cfg.labels = labels
 	}
@@ -136,18 +145,55 @@ func WithNodepoolNodeControllerAffinity(nodeSelectors map[string][]string) Nodep
 	}
 }
 
+// WithNodepoolSharedProviderID forces virtual nodes to share unique providerID.
+func WithNodepoolSharedProviderID(providerID string) NodepoolOpt {
+	return func(cfg *nodepoolConfig) {
+		cfg.sharedProviderID = providerID
+	}
+}
+
 // toNodeHelmValuesAppliers creates ValuesAppliers.
 //
 // NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
-func (cfg *nodepoolConfig) toNodeHelmValuesAppliers() []helmcli.ValuesApplier {
-	res := make([]string, 0, 5)
+func (cfg *nodepoolConfig) toNodeHelmValuesAppliers() ([]helmcli.ValuesApplier, error) {
+	res := make([]string, 0, 6)
 
 	res = append(res, fmt.Sprintf("name=%s", cfg.name))
 	res = append(res, fmt.Sprintf("cpu=%d", cfg.cpu))
 	res = append(res, fmt.Sprintf("memory=%d", cfg.memory))
 	res = append(res, fmt.Sprintf("replicas=%d", cfg.count))
 	res = append(res, fmt.Sprintf("maxPods=%d", cfg.maxPods))
-	return []helmcli.ValuesApplier{helmcli.StringPathValuesApplier(res...)}
+	res = append(res, fmt.Sprintf("sharedProviderID=%s", cfg.sharedProviderID))
+
+	nodeLabelsYaml, err := cfg.renderNodeLabels()
+	if err != nil {
+		return nil, err
+	}
+
+	nodeLabelsApplier, err := helmcli.YAMLValuesApplier(nodeLabelsYaml)
+	if err != nil {
+		return nil, err
+	}
+
+	return []helmcli.ValuesApplier{
+		helmcli.StringPathValuesApplier(res...),
+		nodeLabelsApplier,
+	}, nil
+}
+
+// renderNodeLabels renders virtual node's labels into YAML string
+//
+// NOTE: Please align with ../manifests/virtualcluster/nodes/values.yaml
+func (cfg *nodepoolConfig) renderNodeLabels() (string, error) {
+	target := map[string]interface{}{
+		"nodeLabels": cfg.labels,
+	}
+
+	rawData, err := yaml.Marshal(target)
+	if err != nil {
+		return "", fmt.Errorf("failed to render nodeLabels: %w", err)
+	}
+	return string(rawData), nil
 }
 
 // toNodeControllerHelmValuesAppliers creates ValuesAppliers.
