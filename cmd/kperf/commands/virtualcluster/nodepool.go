@@ -72,7 +72,7 @@ var nodepoolAddCommand = cli.Command{
 	},
 	Action: func(cliCtx *cli.Context) error {
 		if cliCtx.NArg() != 1 {
-			return fmt.Errorf("required only one argument as nodepool name")
+			return fmt.Errorf("required only one argument as nodepool name: %v", cliCtx.Args())
 		}
 		nodepoolName := strings.TrimSpace(cliCtx.Args().Get(0))
 		if len(nodepoolName) == 0 {
