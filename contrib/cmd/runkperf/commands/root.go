@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Azure/kperf/contrib/cmd/runkperf/commands/ekswarmup"
+
 	"github.com/urfave/cli"
 	"k8s.io/klog/v2"
 )
@@ -15,7 +17,9 @@ func App() *cli.App {
 	return &cli.App{
 		Name: "runkperf",
 		// TODO: add more fields
-		Commands: []cli.Command{},
+		Commands: []cli.Command{
+			ekswarmup.Command,
+		},
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "v",
