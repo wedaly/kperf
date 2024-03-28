@@ -149,7 +149,7 @@ func deployWarmupRunnerGroup(ctx context.Context, kubeCfgPath string, runnerImag
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file for %s: %w", target, err)
 	}
-	defer cleanup()
+	defer func() { _ = cleanup() }()
 
 	kr := utils.NewKperfRunner(kubeCfgPath, runnerImage)
 

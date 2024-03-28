@@ -32,7 +32,7 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 	if err != nil {
 		panic(fmt.Errorf("unexpected error when create job yaml: %v", err))
 	}
-	defer cleanup()
+	defer func() { _ = cleanup() }()
 
 	kr := NewKubectlRunner(kubeCfgPath, namespace)
 
@@ -120,7 +120,7 @@ func CreateTempFileWithContent(data []byte) (_name string, _cleanup func() error
 	fName := f.Name()
 	defer func() {
 		if retErr != nil {
-			os.RemoveAll(fName)
+			_ = os.RemoveAll(fName)
 		}
 	}()
 

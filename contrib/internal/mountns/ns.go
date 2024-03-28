@@ -18,20 +18,17 @@ func Executes(run func() error) error {
 	wg.Add(1)
 
 	var innerErr error
-	go func() (retErr error) {
+	go func() {
 		defer wg.Done()
-
-		defer func() {
-			innerErr = retErr
-		}()
 
 		runtime.LockOSThread()
 
 		err := unix.Unshare(unix.CLONE_FS | unix.CLONE_NEWNS)
 		if err != nil {
-			return fmt.Errorf("failed to create a new mount namespace: %w", err)
+			innerErr = fmt.Errorf("failed to create a new mount namespace: %w", err)
+			return
 		}
-		return run()
+		innerErr = run()
 	}()
 	wg.Wait()
 

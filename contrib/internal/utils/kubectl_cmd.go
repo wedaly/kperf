@@ -68,7 +68,7 @@ func (kr *KubectlRunner) Metrics(ctx context.Context, timeout time.Duration, fqd
 		if err != nil {
 			return err
 		}
-		defer cleanup()
+		defer func() { _ = cleanup() }()
 
 		target := "/etc/hosts"
 
