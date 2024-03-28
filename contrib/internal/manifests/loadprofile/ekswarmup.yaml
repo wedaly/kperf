@@ -1,0 +1,31 @@
+count: 10
+loadProfile:
+  version: 1
+  description: "warmup"
+  spec:
+    rate: 10
+    total: 8000
+    conns: 10
+    client: 100
+    contentType: json
+    disableHTTP2: false
+    maxRetries: 0
+    requests:
+      - staleList:
+          version: v1
+          resource: pods
+          limit: 500
+        shares: 1000 # chance 1000 / (1000 + 100 + 100)
+      - quorumList:
+          version: v1
+          resource: pods
+          limit: 1000
+        shares: 100 # chance 100 / (1000 + 100 + 100)
+      - quorumList:
+          version: v1
+          resource: events
+          limit: 1000
+        shares: 100 # chance 100 / (1000 + 100 + 100)
+nodeAffinity:
+  node.kubernetes.io/instance-type:
+    - m4.4xlarge
