@@ -57,7 +57,7 @@ func (kr *KperfRunner) DeleteNodepool(ctx context.Context, timeout time.Duration
 }
 
 // RGRun deploys runner group into kubernetes cluster.
-func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPath, flowcontrol string) error {
+func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPath, flowcontrol, affinity string) error {
 	args := []string{"rg"}
 	if kr.kubeCfgPath != "" {
 		args = append(args, fmt.Sprintf("--kubeconfig=%s", kr.kubeCfgPath))
@@ -65,6 +65,7 @@ func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPa
 	args = append(args, "run",
 		fmt.Sprintf("--runnergroup=file://%v", rgCfgPath),
 		fmt.Sprintf("--runner-image=%v", kr.runnerImage),
+		fmt.Sprintf("--affinity=%v", affinity),
 	)
 	if flowcontrol != "" {
 		args = append(args, fmt.Sprintf("--runner-flowcontrol=%v", flowcontrol))
