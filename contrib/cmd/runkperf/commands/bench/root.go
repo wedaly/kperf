@@ -7,8 +7,8 @@ import (
 
 	"github.com/Azure/kperf/api/types"
 	kperfcmdutils "github.com/Azure/kperf/cmd/kperf/commands/utils"
+	"github.com/Azure/kperf/contrib/internal/manifests"
 	"github.com/Azure/kperf/contrib/internal/utils"
-	"github.com/Azure/kperf/manifests"
 	"k8s.io/klog/v2"
 
 	"github.com/urfave/cli"

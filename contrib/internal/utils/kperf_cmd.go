@@ -36,9 +36,13 @@ func (kr *KperfRunner) NewNodepool(
 		fmt.Sprintf("--cpu=%v", 32),
 		fmt.Sprintf("--memory=%v", 96),
 		fmt.Sprintf("--max-pods=%v", maxPods),
-		fmt.Sprintf("--affinity=%v", affinity),
-		fmt.Sprintf("--shared-provider-id=%v", sharedProviderID),
 	)
+	if affinity != "" {
+		args = append(args, fmt.Sprintf("--affinity=%v", affinity))
+	}
+	if sharedProviderID != "" {
+		args = append(args, fmt.Sprintf("--shared-provider-id=%v", sharedProviderID))
+	}
 
 	_, err := runCommand(ctx, timeout, "kperf", args)
 	return err
@@ -65,8 +69,10 @@ func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPa
 	args = append(args, "run",
 		fmt.Sprintf("--runnergroup=file://%v", rgCfgPath),
 		fmt.Sprintf("--runner-image=%v", kr.runnerImage),
-		fmt.Sprintf("--affinity=%v", affinity),
 	)
+	if affinity != "" {
+		args = append(args, fmt.Sprintf("--affinity=%v", affinity))
+	}
 	if flowcontrol != "" {
 		args = append(args, fmt.Sprintf("--runner-flowcontrol=%v", flowcontrol))
 	}
