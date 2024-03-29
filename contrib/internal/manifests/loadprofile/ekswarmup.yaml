@@ -4,7 +4,7 @@ loadProfile:
   description: "warmup"
   spec:
     rate: 10
-    total: 8000
+    total: 10000
     conns: 10
     client: 100
     contentType: json
