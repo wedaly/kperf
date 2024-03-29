@@ -113,7 +113,7 @@ func deployWarmupVirtualNodepool(ctx context.Context, kubeCfgPath string) (func(
 	kr := utils.NewKperfRunner(kubeCfgPath, "")
 
 	klog.V(0).InfoS("Deploying virtual nodepool", "name", target)
-	sharedProviderID, err := fetchPlaceholderNodeProviderID(ctx, kubeCfgPath)
+	sharedProviderID, err := utils.FetchNodeProviderIDByType(ctx, kubeCfgPath, utils.EKSIdleNodepoolInstanceType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get placeholder providerID: %w", err)
 	}
@@ -185,24 +185,6 @@ func deployWarmupRunnerGroup(ctx context.Context, kubeCfgPath string, runnerImag
 		}
 		return nil
 	}
-}
-
-func fetchPlaceholderNodeProviderID(ctx context.Context, kubeCfgPath string) (string, error) {
-	clientset := mustClientset(kubeCfgPath)
-
-	// TODO(weifu): make it configurable
-	label := "node.kubernetes.io/instance-type=m4.large"
-
-	nodeCli := clientset.CoreV1().Nodes()
-	listResp, err := nodeCli.List(ctx, metav1.ListOptions{LabelSelector: label})
-	if err != nil {
-		return "", fmt.Errorf("failed to list nodes with label %s: %w", label, err)
-	}
-
-	if len(listResp.Items) == 0 {
-		return "", fmt.Errorf("required placeholder node with m4.large flavor")
-	}
-	return listResp.Items[0].Spec.ProviderID, nil
 }
 
 // patchEKSDaemonsetWithoutToleration removes tolerations to avoid pod scheduled

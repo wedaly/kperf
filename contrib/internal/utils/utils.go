@@ -13,7 +13,23 @@ import (
 
 	"github.com/Azure/kperf/contrib/internal/manifests"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+)
+
+var (
+	// EKSIdleNodepoolInstanceType is the instance type of idle nodepool.
+	//
+	// NOTE: The EKS cloud provider will delete all the NOT-READY nodes
+	// which aren't managed by it. When kwok-controller fails to update
+	// virtual node's lease, the EKS cloud provider would delete that
+	// virtual node. It's unexpected behavior. In order to avoid this case,
+	// we should create a idle nodepool with one node and use that node's
+	// provider ID for all the virtual nodes so that EKS cloud provider
+	// won't delete our virtual nodes.
+	EKSIdleNodepoolInstanceType = "m4.large"
 )
 
 // RepeatJobWith3KPod repeats to deploy 3k pods.
@@ -78,6 +94,42 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 		}
 		time.Sleep(internal)
 	}
+}
+
+// FetchNodeProviderIDByType is used to get one node's provider id with a given
+// instance type.
+func FetchNodeProviderIDByType(ctx context.Context, kubeCfgPath string, instanceType string) (string, error) {
+	clientset, err := buildClientset(kubeCfgPath)
+	if err != nil {
+		return "", err
+	}
+
+	label := fmt.Sprintf("node.kubernetes.io/instance-type=%v", instanceType)
+
+	nodeCli := clientset.CoreV1().Nodes()
+	listResp, err := nodeCli.List(ctx, metav1.ListOptions{LabelSelector: label})
+	if err != nil {
+		return "", fmt.Errorf("failed to list nodes with label %s: %w", label, err)
+	}
+
+	if len(listResp.Items) == 0 {
+		return "", fmt.Errorf("there is no such node with label %s", label)
+	}
+	return listResp.Items[0].Spec.ProviderID, nil
+}
+
+// buildClientset returns kubernetes clientset.
+func buildClientset(kubeCfgPath string) (*kubernetes.Clientset, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeCfgPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build client-go config: %w", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build client-go rest client: %w", err)
+	}
+	return clientset, nil
 }
 
 // NSLookup returns ips for URL.
