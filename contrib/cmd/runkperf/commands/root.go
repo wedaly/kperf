@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Azure/kperf/contrib/cmd/runkperf/commands/bench"
 	"github.com/Azure/kperf/contrib/cmd/runkperf/commands/ekswarmup"
 
 	"github.com/urfave/cli"
@@ -19,6 +20,7 @@ func App() *cli.App {
 		// TODO: add more fields
 		Commands: []cli.Command{
 			ekswarmup.Command,
+			bench.Command,
 		},
 		Flags: []cli.Flag{
 			cli.StringFlag{

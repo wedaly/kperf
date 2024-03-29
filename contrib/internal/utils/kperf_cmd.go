@@ -36,9 +36,13 @@ func (kr *KperfRunner) NewNodepool(
 		fmt.Sprintf("--cpu=%v", 32),
 		fmt.Sprintf("--memory=%v", 96),
 		fmt.Sprintf("--max-pods=%v", maxPods),
-		fmt.Sprintf("--affinity=%v", affinity),
-		fmt.Sprintf("--shared-provider-id=%v", sharedProviderID),
 	)
+	if affinity != "" {
+		args = append(args, fmt.Sprintf("--affinity=%v", affinity))
+	}
+	if sharedProviderID != "" {
+		args = append(args, fmt.Sprintf("--shared-provider-id=%v", sharedProviderID))
+	}
 
 	_, err := runCommand(ctx, timeout, "kperf", args)
 	return err
@@ -57,7 +61,7 @@ func (kr *KperfRunner) DeleteNodepool(ctx context.Context, timeout time.Duration
 }
 
 // RGRun deploys runner group into kubernetes cluster.
-func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPath, flowcontrol string) error {
+func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPath, flowcontrol, affinity string) error {
 	args := []string{"rg"}
 	if kr.kubeCfgPath != "" {
 		args = append(args, fmt.Sprintf("--kubeconfig=%s", kr.kubeCfgPath))
@@ -66,6 +70,9 @@ func (kr *KperfRunner) RGRun(ctx context.Context, timeout time.Duration, rgCfgPa
 		fmt.Sprintf("--runnergroup=file://%v", rgCfgPath),
 		fmt.Sprintf("--runner-image=%v", kr.runnerImage),
 	)
+	if affinity != "" {
+		args = append(args, fmt.Sprintf("--affinity=%v", affinity))
+	}
 	if flowcontrol != "" {
 		args = append(args, fmt.Sprintf("--runner-flowcontrol=%v", flowcontrol))
 	}
