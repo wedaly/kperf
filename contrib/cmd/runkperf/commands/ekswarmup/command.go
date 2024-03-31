@@ -159,8 +159,7 @@ func deployWarmupRunnerGroup(ctx context.Context, kubeCfgPath string, runnerImag
 		klog.V(0).ErrorS(derr, "failed to delete existing runner group")
 	}
 
-	rerr := kr.RGRun(ctx, 0, rgCfgFile, "exempt:5",
-		fmt.Sprintf("node.kubernetes.io/instance-type=%v", utils.EKSRunnerNodepoolInstanceType))
+	rerr := kr.RGRun(ctx, 0, rgCfgFile, "workload-low:1000", "")
 	if rerr != nil {
 		return fmt.Errorf("failed to deploy warmup runner group: %w", rerr)
 	}
