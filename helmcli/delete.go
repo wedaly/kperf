@@ -1,9 +1,11 @@
 package helmcli
 
 import (
+	"errors"
 	"fmt"
 
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
@@ -37,5 +39,8 @@ func NewDeleteCli(kubeconfigPath string, namespace string) (*DeleteCli, error) {
 func (cli *DeleteCli) Delete(releaseName string) error {
 	delCli := action.NewUninstall(cli.cfg)
 	_, err := delCli.Run(releaseName)
+	if errors.Is(err, driver.ErrReleaseNotFound) {
+		err = nil
+	}
 	return err
 }
