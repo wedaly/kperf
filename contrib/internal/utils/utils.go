@@ -2,11 +2,13 @@ package utils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -134,44 +136,101 @@ func NewLoadProfileFromEmbed(target string, tweakFn func(*types.RunnerGroupSpec)
 // DeployRunnerGroup deploys runner group for benchmark.
 func DeployRunnerGroup(ctx context.Context,
 	kubeCfgPath, runnerImage, rgCfgFile string,
-	runnerFlowControl, runnerGroupAffinity string) (string, error) {
+	runnerFlowControl, runnerGroupAffinity string) (*types.RunnerGroupsReport, error) {
 
-	klog.V(0).InfoS("Deploying runner group", "config", rgCfgFile)
+	klog.InfoS("Deploying runner group", "config", rgCfgFile)
 
 	kr := NewKperfRunner(kubeCfgPath, runnerImage)
 
-	klog.V(0).Info("Deleting existing runner group")
+	klog.Info("Deleting existing runner group")
 	derr := kr.RGDelete(ctx, 0)
 	if derr != nil {
-		klog.V(0).ErrorS(derr, "failed to delete existing runner group")
+		klog.ErrorS(derr, "failed to delete existing runner group")
 	}
 
 	rerr := kr.RGRun(ctx, 0, rgCfgFile, runnerFlowControl, runnerGroupAffinity)
 	if rerr != nil {
-		return "", fmt.Errorf("failed to deploy runner group: %w", rerr)
+		return nil, fmt.Errorf("failed to deploy runner group: %w", rerr)
 	}
 
-	klog.V(0).Info("Waiting runner group")
+	klog.Info("Waiting runner group")
 	for {
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
-		res, err := kr.RGResult(ctx, 1*time.Minute)
+		// NOTE: The result subcommand will hold the long connection
+		// until runner-group's server replies. However, there is no
+		// data transport before runners finish. If the apiserver
+		// has been restarted, the proxy tunnel will be broken and
+		// the client won't be notified. So, the client will hang forever.
+		// Using 1 min as timeout is to ensure we can get result in time.
+		data, err := kr.RGResult(ctx, 1*time.Minute)
 		if err != nil {
-			klog.V(0).ErrorS(err, "failed to fetch warmup runner group's result")
+			klog.ErrorS(err, "failed to fetch warmup runner group's result")
 			continue
 		}
-		klog.V(0).InfoS("Runner group's result", "data", res)
+		klog.InfoS("Runner group's result", "data", data)
 
-		klog.V(0).Info("Deleting runner group")
-		if derr := kr.RGDelete(ctx, 0); derr != nil {
-			klog.V(0).ErrorS(err, "failed to delete runner group")
+		var rgResult types.RunnerGroupsReport
+		if err = json.Unmarshal([]byte(data), &rgResult); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into RunnerGroupsReport: %w", err)
 		}
-		return res, nil
+
+		klog.Info("Deleting runner group")
+		if derr := kr.RGDelete(ctx, 0); derr != nil {
+			klog.ErrorS(err, "failed to delete runner group")
+		}
+		return &rgResult, nil
 	}
+}
+
+// FetchAPIServerCores fetchs core number for each kube-apiserver.
+func FetchAPIServerCores(ctx context.Context, kubeCfgPath string) (map[string]int, error) {
+	klog.V(0).Info("Fetching apiserver's cores")
+
+	kr := NewKubectlRunner(kubeCfgPath, "")
+	fqdn, err := kr.FQDN(ctx, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster fqdn: %w", err)
+	}
+
+	ips, nerr := NSLookup(fqdn)
+	if nerr != nil {
+		return nil, fmt.Errorf("failed get dns records of fqdn %s: %w", fqdn, nerr)
+	}
+
+	res := map[string]int{}
+	for _, ip := range ips {
+		cores, err := func() (int, error) {
+			data, err := kr.Metrics(ctx, 0, fqdn, ip)
+			if err != nil {
+				return 0, fmt.Errorf("failed to get metrics for ip %s: %w", ip, err)
+			}
+
+			lines := strings.Split(string(data), "\n")
+			for _, line := range lines {
+				if strings.HasPrefix(line, "go_sched_gomaxprocs_threads") {
+					vInStr := strings.Fields(line)[1]
+					v, err := strconv.Atoi(vInStr)
+					if err != nil {
+						return 0, fmt.Errorf("failed to parse go_sched_gomaxprocs_threads %s: %w", line, err)
+					}
+					return v, nil
+				}
+			}
+			return 0, fmt.Errorf("failed to get go_sched_gomaxprocs_threads")
+		}()
+		if err != nil {
+			klog.V(0).ErrorS(err, "failed to get cores", "ip", ip)
+			continue
+		}
+		klog.V(0).InfoS("apiserver cores", ip, cores)
+		res[ip] = cores
+	}
+	return res, nil
 }
 
 // FetchNodeProviderIDByType is used to get one node's provider id with a given

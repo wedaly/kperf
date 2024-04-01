@@ -3,8 +3,6 @@ package ekswarmup
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -91,7 +89,7 @@ var Command = cli.Command{
 			return perr
 		}
 
-		cores, ferr := fetchAPIServerCores(ctx, kubeCfgPath)
+		cores, ferr := utils.FetchAPIServerCores(ctx, kubeCfgPath)
 		if ferr == nil {
 			if isReady(cores) {
 				klog.V(0).Infof("apiserver resource is ready: %v", cores)
@@ -132,7 +130,7 @@ var Command = cli.Command{
 		jobCancel()
 		wg.Wait()
 
-		cores, ferr = fetchAPIServerCores(ctx, kubeCfgPath)
+		cores, ferr = utils.FetchAPIServerCores(ctx, kubeCfgPath)
 		if ferr == nil {
 			if isReady(cores) {
 				klog.V(0).Infof("apiserver resource is ready: %v", cores)
@@ -202,55 +200,6 @@ func patchEKSDaemonsetWithoutToleration(ctx context.Context, kubeCfgPath string)
 		}
 	}
 	return nil
-}
-
-// fetchAPIServerCores fetchs core number for each kube-apiserver.
-func fetchAPIServerCores(ctx context.Context, kubeCfgPath string) (map[string]int, error) {
-	klog.V(0).Info("Fetching apiserver's cores")
-
-	kr := utils.NewKubectlRunner(kubeCfgPath, "")
-	fqdn, err := kr.FQDN(ctx, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster fqdn: %w", err)
-	}
-
-	ips, nerr := utils.NSLookup(fqdn)
-	if nerr != nil {
-		return nil, fmt.Errorf("failed get dns records of fqdn %s: %w", fqdn, nerr)
-	}
-
-	res := map[string]int{}
-	for _, ip := range ips {
-		cores, err := func() (int, error) {
-			data, err := kr.Metrics(ctx, 0, fqdn, ip)
-			if err != nil {
-				return 0, fmt.Errorf("failed to get metrics for ip %s: %w", ip, err)
-			}
-
-			lines := strings.Split(string(data), "\n")
-			for _, line := range lines {
-				if strings.HasPrefix(line, "go_sched_gomaxprocs_threads") {
-					vInStr := strings.Fields(line)[1]
-					v, err := strconv.Atoi(vInStr)
-					if err != nil {
-						return 0, fmt.Errorf("failed to parse go_sched_gomaxprocs_threads %s: %w", line, err)
-					}
-					return v, nil
-				}
-			}
-			return 0, fmt.Errorf("failed to get go_sched_gomaxprocs_threads")
-		}()
-		if err != nil {
-			klog.V(0).ErrorS(err, "failed to get cores", "ip", ip)
-			continue
-		}
-		klog.V(0).InfoS("apiserver cores", ip, cores)
-		res[ip] = cores
-	}
-	if len(res) < 2 {
-		return nil, fmt.Errorf("expected two instances at least")
-	}
-	return res, nil
 }
 
 // mustClientset returns kubernetes clientset without error.
