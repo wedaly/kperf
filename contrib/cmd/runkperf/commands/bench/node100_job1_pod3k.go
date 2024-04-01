@@ -77,7 +77,13 @@ that nodes. It repeats to create and delete job. The load profile is fixed.
 		}()
 
 		// TODO(weifu): write result into file
-		derr := deployRunnerGroup(ctx, cliCtx, rgCfgFile)
+		_, derr := utils.DeployRunnerGroup(ctx,
+			cliCtx.GlobalString("kubeconfig"),
+			cliCtx.GlobalString("runner-image"),
+			rgCfgFile,
+			cliCtx.GlobalString("runner-flowcontrol"),
+			cliCtx.GlobalString("rg-affinity"),
+		)
 		jobCancel()
 		wg.Wait()
 		return derr

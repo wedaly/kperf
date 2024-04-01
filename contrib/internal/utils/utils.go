@@ -131,6 +131,49 @@ func NewLoadProfileFromEmbed(target string, tweakFn func(*types.RunnerGroupSpec)
 	return CreateTempFileWithContent(data)
 }
 
+// DeployRunnerGroup deploys runner group for benchmark.
+func DeployRunnerGroup(ctx context.Context,
+	kubeCfgPath, runnerImage, rgCfgFile string,
+	runnerFlowControl, runnerGroupAffinity string) (string, error) {
+
+	klog.V(0).InfoS("Deploying runner group", "config", rgCfgFile)
+
+	kr := NewKperfRunner(kubeCfgPath, runnerImage)
+
+	klog.V(0).Info("Deleting existing runner group")
+	derr := kr.RGDelete(ctx, 0)
+	if derr != nil {
+		klog.V(0).ErrorS(derr, "failed to delete existing runner group")
+	}
+
+	rerr := kr.RGRun(ctx, 0, rgCfgFile, runnerFlowControl, runnerGroupAffinity)
+	if rerr != nil {
+		return "", fmt.Errorf("failed to deploy runner group: %w", rerr)
+	}
+
+	klog.V(0).Info("Waiting runner group")
+	for {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
+		res, err := kr.RGResult(ctx, 1*time.Minute)
+		if err != nil {
+			klog.V(0).ErrorS(err, "failed to fetch warmup runner group's result")
+			continue
+		}
+		klog.V(0).InfoS("Runner group's result", "data", res)
+
+		klog.V(0).Info("Deleting runner group")
+		if derr := kr.RGDelete(ctx, 0); derr != nil {
+			klog.V(0).ErrorS(err, "failed to delete runner group")
+		}
+		return res, nil
+	}
+}
+
 // FetchNodeProviderIDByType is used to get one node's provider id with a given
 // instance type.
 func FetchNodeProviderIDByType(ctx context.Context, kubeCfgPath string, instanceType string) (string, error) {
