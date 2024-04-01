@@ -11,8 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/contrib/internal/manifests"
 
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -99,6 +101,76 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 			klog.V(0).ErrorS(derr, "failed to delete", "job", target)
 		}
 		time.Sleep(internal)
+	}
+}
+
+// NewLoadProfileFromEmbed reads load profile from embed memory.
+func NewLoadProfileFromEmbed(target string, tweakFn func(*types.RunnerGroupSpec) error) (_name string, _cleanup func() error, _ error) {
+	data, err := manifests.FS.ReadFile(target)
+	if err != nil {
+		return "", nil, fmt.Errorf("unexpected error when read %s from embed memory: %v", target, err)
+	}
+
+	if tweakFn != nil {
+		var spec types.RunnerGroupSpec
+		if err = yaml.Unmarshal(data, &spec); err != nil {
+			return "", nil, fmt.Errorf("failed to unmarshal into runner group spec:\n (data: %s)\n: %w",
+				string(data), err)
+		}
+
+		if err = tweakFn(&spec); err != nil {
+			return "", nil, err
+		}
+
+		data, err = yaml.Marshal(spec)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to marshal runner group spec after tweak: %w", err)
+		}
+	}
+
+	return CreateTempFileWithContent(data)
+}
+
+// DeployRunnerGroup deploys runner group for benchmark.
+func DeployRunnerGroup(ctx context.Context,
+	kubeCfgPath, runnerImage, rgCfgFile string,
+	runnerFlowControl, runnerGroupAffinity string) (string, error) {
+
+	klog.V(0).InfoS("Deploying runner group", "config", rgCfgFile)
+
+	kr := NewKperfRunner(kubeCfgPath, runnerImage)
+
+	klog.V(0).Info("Deleting existing runner group")
+	derr := kr.RGDelete(ctx, 0)
+	if derr != nil {
+		klog.V(0).ErrorS(derr, "failed to delete existing runner group")
+	}
+
+	rerr := kr.RGRun(ctx, 0, rgCfgFile, runnerFlowControl, runnerGroupAffinity)
+	if rerr != nil {
+		return "", fmt.Errorf("failed to deploy runner group: %w", rerr)
+	}
+
+	klog.V(0).Info("Waiting runner group")
+	for {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		default:
+		}
+
+		res, err := kr.RGResult(ctx, 1*time.Minute)
+		if err != nil {
+			klog.V(0).ErrorS(err, "failed to fetch warmup runner group's result")
+			continue
+		}
+		klog.V(0).InfoS("Runner group's result", "data", res)
+
+		klog.V(0).Info("Deleting runner group")
+		if derr := kr.RGDelete(ctx, 0); derr != nil {
+			klog.V(0).ErrorS(err, "failed to delete runner group")
+		}
+		return res, nil
 	}
 }
 
