@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -172,6 +173,52 @@ func DeployRunnerGroup(ctx context.Context,
 		}
 		return res, nil
 	}
+}
+
+// FetchAPIServerCores fetchs core number for each kube-apiserver.
+func FetchAPIServerCores(ctx context.Context, kubeCfgPath string) (map[string]int, error) {
+	klog.V(0).Info("Fetching apiserver's cores")
+
+	kr := NewKubectlRunner(kubeCfgPath, "")
+	fqdn, err := kr.FQDN(ctx, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster fqdn: %w", err)
+	}
+
+	ips, nerr := NSLookup(fqdn)
+	if nerr != nil {
+		return nil, fmt.Errorf("failed get dns records of fqdn %s: %w", fqdn, nerr)
+	}
+
+	res := map[string]int{}
+	for _, ip := range ips {
+		cores, err := func() (int, error) {
+			data, err := kr.Metrics(ctx, 0, fqdn, ip)
+			if err != nil {
+				return 0, fmt.Errorf("failed to get metrics for ip %s: %w", ip, err)
+			}
+
+			lines := strings.Split(string(data), "\n")
+			for _, line := range lines {
+				if strings.HasPrefix(line, "go_sched_gomaxprocs_threads") {
+					vInStr := strings.Fields(line)[1]
+					v, err := strconv.Atoi(vInStr)
+					if err != nil {
+						return 0, fmt.Errorf("failed to parse go_sched_gomaxprocs_threads %s: %w", line, err)
+					}
+					return v, nil
+				}
+			}
+			return 0, fmt.Errorf("failed to get go_sched_gomaxprocs_threads")
+		}()
+		if err != nil {
+			klog.V(0).ErrorS(err, "failed to get cores", "ip", ip)
+			continue
+		}
+		klog.V(0).InfoS("apiserver cores", ip, cores)
+		res[ip] = cores
+	}
+	return res, nil
 }
 
 // FetchNodeProviderIDByType is used to get one node's provider id with a given
