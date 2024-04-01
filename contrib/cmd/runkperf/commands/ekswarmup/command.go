@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/kperf/contrib/internal/manifests"
+	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/contrib/internal/utils"
 
 	"github.com/urfave/cli"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -38,12 +39,52 @@ var Command = cli.Command{
 			// Right now, we need to set image manually.
 			Required: true,
 		},
+		cli.StringFlag{
+			Name:  "runner-flowcontrol",
+			Usage: "Apply flowcontrol to runner group. (FORMAT: PriorityLevel:MatchingPrecedence)",
+			Value: "workload-low:1000",
+		},
+		cli.Float64Flag{
+			Name:  "rate",
+			Usage: "The maximum requests per second per runner (There are 10 runners totally)",
+			Value: 20,
+		},
+		cli.IntFlag{
+			Name:  "total",
+			Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 20)",
+			Value: 10000,
+		},
 	},
 	Action: func(cliCtx *cli.Context) (retErr error) {
 		ctx := context.Background()
 
+		rgCfgFile, rgCfgFileDone, err := utils.NewLoadProfileFromEmbed(
+			"loadprofile/ekswarmup.yaml",
+			func(spec *types.RunnerGroupSpec) error {
+				reqs := cliCtx.Int("total")
+				if reqs < 0 {
+					return fmt.Errorf("invalid total value: %v", reqs)
+				}
+
+				rate := cliCtx.Float64("rate")
+				if rate <= 0 {
+					return fmt.Errorf("invalid rate value: %v", rate)
+				}
+
+				spec.Profile.Spec.Total = reqs
+				spec.Profile.Spec.Rate = rate
+
+				data, _ := yaml.Marshal(spec)
+				klog.V(2).InfoS("Load Profile", "config", string(data))
+				return nil
+			},
+		)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = rgCfgFileDone() }()
+
 		kubeCfgPath := cliCtx.String("kubeconfig")
-		runnerImage := cliCtx.String("runner-image")
 
 		perr := patchEKSDaemonsetWithoutToleration(ctx, kubeCfgPath)
 		if perr != nil {
@@ -81,7 +122,13 @@ var Command = cli.Command{
 			utils.RepeatJobWith3KPod(jobCtx, kubeCfgPath, "warmupjob", 5*time.Second)
 		}()
 
-		derr := deployWarmupRunnerGroup(ctx, kubeCfgPath, runnerImage)
+		_, derr := utils.DeployRunnerGroup(ctx,
+			kubeCfgPath,
+			cliCtx.String("runner-image"),
+			rgCfgFile,
+			cliCtx.String("runner-flowcontrol"),
+			"",
+		)
 		jobCancel()
 		wg.Wait()
 
@@ -132,59 +179,6 @@ func deployWarmupVirtualNodepool(ctx context.Context, kubeCfgPath string) (func(
 	return func() error {
 		return kr.DeleteNodepool(ctx, 0, target)
 	}, nil
-}
-
-// deployWarmupRunnerGroup deploys warmup runner group to trigger resource update.
-func deployWarmupRunnerGroup(ctx context.Context, kubeCfgPath string, runnerImage string) error {
-	klog.V(0).Info("Deploying warmup runner group")
-
-	target := "loadprofile/ekswarmup.yaml"
-
-	data, err := manifests.FS.ReadFile(target)
-	if err != nil {
-		return fmt.Errorf("failed to read %s from embed memory: %w", target, err)
-	}
-
-	rgCfgFile, cleanup, err := utils.CreateTempFileWithContent(data)
-	if err != nil {
-		return fmt.Errorf("failed to create temporary file for %s: %w", target, err)
-	}
-	defer func() { _ = cleanup() }()
-
-	kr := utils.NewKperfRunner(kubeCfgPath, runnerImage)
-
-	klog.V(0).Info("Deleting existing runner group")
-	derr := kr.RGDelete(ctx, 0)
-	if derr != nil {
-		klog.V(0).ErrorS(derr, "failed to delete existing runner group")
-	}
-
-	rerr := kr.RGRun(ctx, 0, rgCfgFile, "workload-low:1000", "")
-	if rerr != nil {
-		return fmt.Errorf("failed to deploy warmup runner group: %w", rerr)
-	}
-
-	klog.V(0).Info("Waiting warmup runner group")
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		res, err := kr.RGResult(ctx, 1*time.Minute)
-		if err != nil {
-			klog.V(0).ErrorS(err, "failed to fetch warmup runner group's result")
-			continue
-		}
-		klog.V(0).Infof("Warmup runner group's result: %s", res)
-
-		klog.V(0).Info("Deleting warmup runner group")
-		if derr := kr.RGDelete(ctx, 0); derr != nil {
-			klog.V(0).ErrorS(err, "failed to delete existing runner group")
-		}
-		return nil
-	}
 }
 
 // patchEKSDaemonsetWithoutToleration removes tolerations to avoid pod scheduled
