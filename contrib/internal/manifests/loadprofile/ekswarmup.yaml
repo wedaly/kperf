@@ -3,7 +3,7 @@ loadProfile:
   version: 1
   description: "warmup"
   spec:
-    rate: 10
+    rate: 20
     total: 10000
     conns: 10
     client: 100
