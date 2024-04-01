@@ -33,7 +33,7 @@ that nodes. It repeats to create and delete job. The load profile is fixed.
 		ctx := context.Background()
 		kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
-		rgCfgFile, rgCfgFileDone, err := newLoadProfileFromEmbed(
+		rgCfgFile, rgCfgFileDone, err := utils.NewLoadProfileFromEmbed(
 			"loadprofile/node100_job1_pod3k.yaml",
 			func(spec *types.RunnerGroupSpec) error {
 				reqs := cliCtx.Int("total-requests")

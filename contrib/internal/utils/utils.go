@@ -11,8 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/contrib/internal/manifests"
 
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -100,6 +102,33 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 		}
 		time.Sleep(internal)
 	}
+}
+
+// NewLoadProfileFromEmbed reads load profile from embed memory.
+func NewLoadProfileFromEmbed(target string, tweakFn func(*types.RunnerGroupSpec) error) (_name string, _cleanup func() error, _ error) {
+	data, err := manifests.FS.ReadFile(target)
+	if err != nil {
+		return "", nil, fmt.Errorf("unexpected error when read %s from embed memory: %v", target, err)
+	}
+
+	if tweakFn != nil {
+		var spec types.RunnerGroupSpec
+		if err = yaml.Unmarshal(data, &spec); err != nil {
+			return "", nil, fmt.Errorf("failed to unmarshal into runner group spec:\n (data: %s)\n: %w",
+				string(data), err)
+		}
+
+		if err = tweakFn(&spec); err != nil {
+			return "", nil, err
+		}
+
+		data, err = yaml.Marshal(spec)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to marshal runner group spec after tweak: %w", err)
+		}
+	}
+
+	return CreateTempFileWithContent(data)
 }
 
 // FetchNodeProviderIDByType is used to get one node's provider id with a given

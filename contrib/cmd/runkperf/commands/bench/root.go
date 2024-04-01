@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/kperf/api/types"
 	kperfcmdutils "github.com/Azure/kperf/cmd/kperf/commands/utils"
-	"github.com/Azure/kperf/contrib/internal/manifests"
 	"github.com/Azure/kperf/contrib/internal/utils"
 	"k8s.io/klog/v2"
 
 	"github.com/urfave/cli"
-	"gopkg.in/yaml.v2"
 )
 
 // Command represents bench subcommand.
@@ -140,31 +137,4 @@ func deployRunnerGroup(ctx context.Context, cliCtx *cli.Context, rgCfgFile strin
 		}
 		return nil
 	}
-}
-
-// newLoadProfileFromEmbed reads load profile from embed memory.
-func newLoadProfileFromEmbed(target string, tweakFn func(*types.RunnerGroupSpec) error) (_name string, _cleanup func() error, _ error) {
-	data, err := manifests.FS.ReadFile(target)
-	if err != nil {
-		return "", nil, fmt.Errorf("unexpected error when read %s from embed memory: %v", target, err)
-	}
-
-	if tweakFn != nil {
-		var spec types.RunnerGroupSpec
-		if err = yaml.Unmarshal(data, &spec); err != nil {
-			return "", nil, fmt.Errorf("failed to unmarshal into runner group spec:\n (data: %s)\n: %w",
-				string(data), err)
-		}
-
-		if err = tweakFn(&spec); err != nil {
-			return "", nil, err
-		}
-
-		data, err = yaml.Marshal(spec)
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to marshal runner group spec after tweak: %w", err)
-		}
-	}
-
-	return utils.CreateTempFileWithContent(data)
 }
