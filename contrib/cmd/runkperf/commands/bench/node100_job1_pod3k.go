@@ -25,7 +25,7 @@ that nodes. It repeats to create and delete job. The load profile is fixed.
 	`,
 	Flags: []cli.Flag{
 		cli.IntFlag{
-			Name:  "total-requests",
+			Name:  "total",
 			Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 10)",
 			Value: 36000,
 		},
@@ -46,7 +46,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	rgCfgFile, rgCfgFileDone, err := utils.NewLoadProfileFromEmbed(
 		"loadprofile/node100_job1_pod3k.yaml",
 		func(spec *types.RunnerGroupSpec) error {
-			reqs := cliCtx.Int("total-requests")
+			reqs := cliCtx.Int("total")
 			if reqs < 0 {
 				return fmt.Errorf("invalid total-requests value: %v", reqs)
 			}
