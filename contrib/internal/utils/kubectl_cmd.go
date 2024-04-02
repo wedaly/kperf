@@ -50,7 +50,8 @@ func (kr *KubectlRunner) FQDN(ctx context.Context, timeout time.Duration) (strin
 	if err != nil {
 		return "", err
 	}
-	return strings.ToLower(fqdn.Host), nil
+	host := strings.Split(fqdn.Host, ":")[0]
+	return strings.ToLower(host), nil
 }
 
 // Metrics returns the metrics for a specific kube-apiserver.
