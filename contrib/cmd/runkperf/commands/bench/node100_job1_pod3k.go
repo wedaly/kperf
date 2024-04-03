@@ -43,6 +43,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	ctx := context.Background()
 	kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
+	var rgSpec types.RunnerGroupSpec
 	rgCfgFile, rgCfgFileDone, err := utils.NewLoadProfileFromEmbed(
 		"loadprofile/node100_job1_pod3k.yaml",
 		func(spec *types.RunnerGroupSpec) error {
@@ -62,6 +63,8 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 
 			data, _ := yaml.Marshal(spec)
 			klog.V(2).InfoS("Load Profile", "config", string(data))
+
+			rgSpec = *spec
 			return nil
 		},
 	)
@@ -79,11 +82,12 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	jobInterval := 5 * time.Second
 	jobCtx, jobCancel := context.WithCancel(ctx)
 	go func() {
 		defer wg.Done()
 
-		utils.RepeatJobWith3KPod(jobCtx, kubeCfgPath, "job1pod3k", 5*time.Second)
+		utils.RepeatJobWith3KPod(jobCtx, kubeCfgPath, "job1pod3k", jobInterval)
 	}()
 
 	rgResult, derr := utils.DeployRunnerGroup(ctx,
@@ -101,7 +105,11 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	}
 
 	return &internaltypes.BenchmarkReport{
-		RunnerGroupsReport: *rgResult,
-		Info:               make(map[string]interface{}),
+		Description: fmt.Sprintf(`
+Environment: 100 virtual nodes managed by kwok-controller,
+Workload: Deploy 1 job with 3,000 pods repeatedly. The parallelism is 100. The interval is %v`, jobInterval),
+		LoadSpec: rgSpec,
+		Result:   *rgResult,
+		Info:     make(map[string]interface{}),
 	}, nil
 }
