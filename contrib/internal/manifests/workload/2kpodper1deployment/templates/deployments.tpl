@@ -13,7 +13,7 @@ metadata:
   name: {{ $pattern }}-{{ $index }}
   namespace: {{ $pattern }}-{{ $index }}
   labels:
-    app: {{ $pattern }}-{{ $index }}
+    app: {{ $pattern }}
 spec:
   replicas: 2000
   strategy:
@@ -22,11 +22,11 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: {{ $pattern }}-{{ $index }}
+      app: {{ $pattern }}
   template:
     metadata:
       labels:
-        app: {{ $pattern }}-{{ $index }}
+        app: {{ $pattern }}
     spec:
       affinity:
         nodeAffinity:
