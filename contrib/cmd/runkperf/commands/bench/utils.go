@@ -7,10 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Azure/kperf/api/types"
+	kperfcmdutils "github.com/Azure/kperf/cmd/kperf/commands/utils"
 	internaltypes "github.com/Azure/kperf/contrib/internal/types"
 	"github.com/Azure/kperf/contrib/internal/utils"
 
 	"github.com/urfave/cli"
+	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
 )
 
@@ -119,4 +122,38 @@ func deployVirtualNodepool(ctx context.Context, cliCtx *cli.Context, target stri
 	return func() error {
 		return kr.DeleteNodepool(ctx, 0, target)
 	}, nil
+}
+
+// newLoadProfileFromEmbed loads load profile from embed and tweaks that load
+// profile.
+func newLoadProfileFromEmbed(cliCtx *cli.Context, name string) (_name string, _spec *types.RunnerGroupSpec, _cleanup func() error, _err error) {
+	var rgSpec types.RunnerGroupSpec
+	rgCfgFile, rgCfgFileDone, err := utils.NewLoadProfileFromEmbed(
+		name,
+		func(spec *types.RunnerGroupSpec) error {
+			reqs := cliCtx.Int("total")
+			if reqs < 0 {
+				return fmt.Errorf("invalid total-requests value: %v", reqs)
+			}
+
+			rgAffinity := cliCtx.GlobalString("rg-affinity")
+			affinityLabels, err := kperfcmdutils.KeyValuesMap([]string{rgAffinity})
+			if err != nil {
+				return fmt.Errorf("failed to parse %s affinity: %w", rgAffinity, err)
+			}
+
+			spec.Profile.Spec.Total = reqs
+			spec.NodeAffinity = affinityLabels
+
+			data, _ := yaml.Marshal(spec)
+			klog.V(2).InfoS("Load Profile", "config", string(data))
+
+			rgSpec = *spec
+			return nil
+		},
+	)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	return rgCfgFile, &rgSpec, rgCfgFileDone, nil
 }
