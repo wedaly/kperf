@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -108,11 +109,11 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 }
 
 // RepeatRollingUpdate10KPod repeats to rolling-update 10k pods.
-func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseName string, internal time.Duration) {
+func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseName string, internal time.Duration) (_rollingUpdateFn func(), retErr error) {
 	target := "workload/2kpodper1deployment"
 	ch, err := manifests.LoadChart(target)
 	if err != nil {
-		panic(fmt.Errorf("failed to load virtual node chart: %w", err))
+		return nil, fmt.Errorf("failed to load virtual node chart: %w", err)
 	}
 
 	namePattern := "benchmark"
@@ -132,57 +133,64 @@ func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseN
 		),
 	)
 	if err != nil {
-		panic(fmt.Errorf("failed to create a new helm release cli: %w", err))
+		return nil, fmt.Errorf("failed to create a new helm release cli: %w", err)
 	}
 
 	klog.V(0).InfoS("Deploying deployments", "deployments", total)
 	err = releaseCli.Deploy(ctx, 10*time.Minute)
 	if err != nil {
-		panic(fmt.Errorf("failed to deploy 10k pods by helm chart %s: %w", target, err))
+		if errors.Is(err, context.Canceled) {
+			klog.V(0).Info("Deploy is canceled")
+			return func() {}, nil
+		}
+		return nil, fmt.Errorf("failed to deploy 10k pods by helm chart %s: %w", target, err)
 	}
+	klog.V(0).InfoS("Deployed deployments", "deployments", total)
 
-	defer func() {
-		klog.V(0).Infof("Cleanup helm chart %s", target)
-		err := releaseCli.Uninstall()
-		if err != nil {
-			klog.V(0).ErrorS(err, "failed to cleanup", "chart", target)
-		}
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			klog.V(0).Info("Stop rolling-updating")
-			return
-		case <-time.After(internal):
-		}
-
-		klog.V(0).Info("Start to rolling-update deployments")
-		for i := 0; i < total; i++ {
-			name := fmt.Sprintf("%s-%d", namePattern, i)
-			ns := name
-
-			klog.V(0).InfoS("Rolling-update", "deployment", name, "namespace", ns)
-			err := func() error {
-				kr := NewKubectlRunner(kubeCfgPath, ns)
-
-				err := kr.DeploymentRestart(ctx, 2*time.Minute, name)
-				if err != nil {
-					return fmt.Errorf("failed to restart deployment %s: %w", name, err)
-				}
-
-				err = kr.DeploymentRolloutStatus(ctx, 10*time.Minute, name)
-				if err != nil {
-					return fmt.Errorf("failed to watch the rollout status of deployment %s: %w", name, err)
-				}
-				return nil
-			}()
+	return func() {
+		defer func() {
+			klog.V(0).Infof("Cleanup helm chart %s", target)
+			err := releaseCli.Uninstall()
 			if err != nil {
-				klog.V(0).ErrorS(err, "failed to rolling-update",
-					"deployment", name, "namespace", ns)
+				klog.V(0).ErrorS(err, "failed to cleanup", "chart", target)
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				klog.V(0).Info("Stop rolling-updating")
+				return
+			case <-time.After(internal):
+			}
+
+			klog.V(0).Info("Start to rolling-update deployments")
+			for i := 0; i < total; i++ {
+				name := fmt.Sprintf("%s-%d", namePattern, i)
+				ns := name
+
+				klog.V(0).InfoS("Rolling-update", "deployment", name, "namespace", ns)
+				err := func() error {
+					kr := NewKubectlRunner(kubeCfgPath, ns)
+
+					err := kr.DeploymentRestart(ctx, 2*time.Minute, name)
+					if err != nil {
+						return fmt.Errorf("failed to restart deployment %s: %w", name, err)
+					}
+
+					err = kr.DeploymentRolloutStatus(ctx, 10*time.Minute, name)
+					if err != nil {
+						return fmt.Errorf("failed to watch the rollout status of deployment %s: %w", name, err)
+					}
+					return nil
+				}()
+				if err != nil {
+					klog.V(0).ErrorS(err, "failed to rolling-update",
+						"deployment", name, "namespace", ns)
+				}
 			}
 		}
-	}
+	}, nil
 }
 
 // NewLoadProfileFromEmbed reads load profile from embed memory.
