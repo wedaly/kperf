@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/kperf/api/types"
 	"github.com/Azure/kperf/contrib/internal/manifests"
+	"github.com/Azure/kperf/helmcli"
 
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,6 +104,84 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 			klog.V(0).ErrorS(derr, "failed to delete", "job", target)
 		}
 		time.Sleep(internal)
+	}
+}
+
+// RepeatRollingUpdate10KPod repeats to rolling-update 10k pods.
+func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseName string, internal time.Duration) {
+	target := "workload/2kpodper1deployment"
+	ch, err := manifests.LoadChart(target)
+	if err != nil {
+		panic(fmt.Errorf("failed to load virtual node chart: %w", err))
+	}
+
+	namePattern := "benchmark"
+	total := 5
+
+	releaseCli, err := helmcli.NewReleaseCli(
+		kubeCfgPath,
+		// NOTE: The deployments have fixed namespace name so here
+		// it's used to fill the required argument for NewReleaseCli.
+		"default",
+		releaseName,
+		ch,
+		nil,
+		helmcli.StringPathValuesApplier(
+			fmt.Sprintf("pattern=%s", namePattern),
+			fmt.Sprintf("total=%d", total),
+		),
+	)
+	if err != nil {
+		panic(fmt.Errorf("failed to create a new helm release cli: %w", err))
+	}
+
+	klog.V(0).InfoS("Deploying deployments", "deployments", total)
+	err = releaseCli.Deploy(ctx, 10*time.Minute)
+	if err != nil {
+		panic(fmt.Errorf("failed to deploy 10k pods by helm chart %s: %w", target, err))
+	}
+
+	defer func() {
+		klog.V(0).Infof("Cleanup helm chart %s", target)
+		err := releaseCli.Uninstall()
+		if err != nil {
+			klog.V(0).ErrorS(err, "failed to cleanup", "chart", target)
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			klog.V(0).Info("Stop rolling-updating")
+			return
+		case <-time.After(internal):
+		}
+
+		klog.V(0).Info("Start to rolling-update deployments")
+		for i := 0; i < total; i++ {
+			name := fmt.Sprintf("%s-%d", namePattern, i)
+			ns := name
+
+			klog.V(0).InfoS("Rolling-update", "deployment", name, "namespace", ns)
+			err := func() error {
+				kr := NewKubectlRunner(kubeCfgPath, ns)
+
+				err := kr.DeploymentRestart(ctx, 2*time.Minute, name)
+				if err != nil {
+					return fmt.Errorf("failed to restart deployment %s: %w", name, err)
+				}
+
+				err = kr.DeploymentRolloutStatus(ctx, 10*time.Minute, name)
+				if err != nil {
+					return fmt.Errorf("failed to watch the rollout status of deployment %s: %w", name, err)
+				}
+				return nil
+			}()
+			if err != nil {
+				klog.V(0).ErrorS(err, "failed to rolling-update",
+					"deployment", name, "namespace", ns)
+			}
+		}
 	}
 }
 
