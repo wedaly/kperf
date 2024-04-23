@@ -46,7 +46,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	}
 	defer func() { _ = rgCfgFileDone() }()
 
-	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100job1pod3k", 100, 110)
+	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100job1pod3k", 100, 32, 96, 110)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy virtual node: %w", err)
 	}

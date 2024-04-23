@@ -1,5 +1,6 @@
-{{- $pattern := .Values.pattern }}
-{{- $podSizeInBytes := int .Values.podSizeInBytes }}
+{{- $pattern := .Values.namePattern }}
+{{- $replica := int .Values.replica }}
+{{- $paddingBytes := int .Values.paddingBytes }}
 {{- range $index := (untilStep 0 (int .Values.total) 1) }}
 apiVersion: v1
 kind: Namespace
@@ -16,7 +17,7 @@ metadata:
   labels:
     app: {{ $pattern }}
 spec:
-  replicas: 2000
+  replicas: {{ $replica }}
   strategy:
     rollingUpdate:
       maxSurge: 100
@@ -31,7 +32,7 @@ spec:
         app: {{ $pattern }}
         index: "{{ $index }}"
       annotations:
-        data: "{{ randAlphaNum $podSizeInBytes | nospace }}"
+        data: "{{ randAlphaNum $paddingBytes | nospace }}"
     spec:
       affinity:
         nodeAffinity:

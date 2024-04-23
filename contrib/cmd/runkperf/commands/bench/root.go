@@ -53,6 +53,6 @@ var Command = cli.Command{
 	},
 	Subcommands: []cli.Command{
 		benchNode100Job1Pod3KCase,
-		benchNode100Deployment5Pod10KCase,
+		benchNode100DeploymentNPod10KCase,
 	},
 }

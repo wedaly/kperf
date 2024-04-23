@@ -90,7 +90,7 @@ func renderBenchmarkReportInterceptor(handler subcmdActionFunc) subcmdActionFunc
 }
 
 // deployVirtualNodepool deploys virtual nodepool.
-func deployVirtualNodepool(ctx context.Context, cliCtx *cli.Context, target string, nodes, maxPods int) (func() error, error) {
+func deployVirtualNodepool(ctx context.Context, cliCtx *cli.Context, target string, nodes, cpu, memory, maxPods int) (func() error, error) {
 	klog.V(0).InfoS("Deploying virtual nodepool", "name", target)
 
 	kubeCfgPath := cliCtx.GlobalString("kubeconfig")
@@ -114,7 +114,7 @@ func deployVirtualNodepool(ctx context.Context, cliCtx *cli.Context, target stri
 		klog.V(0).ErrorS(err, "failed to delete nodepool", "name", target)
 	}
 
-	err = kr.NewNodepool(ctx, 0, target, nodes, maxPods, virtualNodeAffinity, sharedProviderID)
+	err = kr.NewNodepool(ctx, 0, target, nodes, cpu, memory, maxPods, virtualNodeAffinity, sharedProviderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create nodepool %s: %w", target, err)
 	}

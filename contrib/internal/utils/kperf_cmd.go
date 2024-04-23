@@ -23,7 +23,7 @@ func NewKperfRunner(kubeCfgPath string, runnerImage string) *KperfRunner {
 func (kr *KperfRunner) NewNodepool(
 	ctx context.Context,
 	timeout time.Duration,
-	name string, nodes int, maxPods int,
+	name string, nodes int, cpu, memory, maxPods int,
 	affinity string,
 	sharedProviderID string,
 ) error {
@@ -33,8 +33,8 @@ func (kr *KperfRunner) NewNodepool(
 	}
 	args = append(args, "add", name,
 		fmt.Sprintf("--nodes=%v", nodes),
-		fmt.Sprintf("--cpu=%v", 32),
-		fmt.Sprintf("--memory=%v", 96),
+		fmt.Sprintf("--cpu=%v", cpu),
+		fmt.Sprintf("--memory=%v", memory),
 		fmt.Sprintf("--max-pods=%v", maxPods),
 	)
 	if affinity != "" {

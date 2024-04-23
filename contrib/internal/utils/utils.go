@@ -108,18 +108,22 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 	}
 }
 
-// RepeatRollingUpdate10KPod repeats to rolling-update 10k pods.
-//
-// NOTE: please align with ../manifests/loadprofile/node100_dp5_pod10k.yaml.
-func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseName string, podSizeInBytes int, internal time.Duration) (_rollingUpdateFn func(), retErr error) {
-	target := "workload/2kpodper1deployment"
+// DeployAndRepeatRollingUpdateDeployments deploys and repeats to rolling-update deployments.
+func DeployAndRepeatRollingUpdateDeployments(
+	ctx context.Context,
+	kubeCfgPath string,
+	releaseName string,
+	total, replica, paddingBytes int,
+	internal time.Duration,
+) (rollingUpdateFn, cleanupFn func(), retErr error) {
+
+	target := "workload/deployments"
 	ch, err := manifests.LoadChart(target)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load virtual node chart: %w", err)
+		return nil, nil, fmt.Errorf("failed to load %s chart: %w", target, err)
 	}
 
-	namePattern := "benchmark"
-	total := 5
+	namePattern := releaseName
 
 	releaseCli, err := helmcli.NewReleaseCli(
 		kubeCfgPath,
@@ -130,35 +134,40 @@ func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseN
 		ch,
 		nil,
 		helmcli.StringPathValuesApplier(
-			fmt.Sprintf("pattern=%s", namePattern),
+			fmt.Sprintf("namePattern=%s", namePattern),
 			fmt.Sprintf("total=%d", total),
-			fmt.Sprintf("podSizeInBytes=%d", podSizeInBytes),
+			fmt.Sprintf("replica=%d", replica),
+			fmt.Sprintf("paddingBytes=%d", paddingBytes),
 		),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a new helm release cli: %w", err)
+		return nil, nil, fmt.Errorf("failed to create a new helm release cli: %w", err)
 	}
 
-	klog.V(0).InfoS("Deploying deployments", "deployments", total, "podSizeInBytes", podSizeInBytes)
+	klog.V(0).InfoS("Deploying deployments",
+		"total", total,
+		"replica", replica,
+		"paddingBytes", paddingBytes,
+	)
 	err = releaseCli.Deploy(ctx, 10*time.Minute)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			klog.V(0).Info("Deploy is canceled")
-			return func() {}, nil
+			return func() {}, func() {}, nil
 		}
-		return nil, fmt.Errorf("failed to deploy 10k pods by helm chart %s: %w", target, err)
+		return nil, nil, fmt.Errorf("failed to deploy helm chart %s: %w", target, err)
 	}
-	klog.V(0).InfoS("Deployed deployments", "deployments", total)
+	klog.V(0).InfoS("Deployed deployments")
 
-	return func() {
-		defer func() {
-			klog.V(0).Infof("Cleanup helm chart %s", target)
-			err := releaseCli.Uninstall()
-			if err != nil {
-				klog.V(0).ErrorS(err, "failed to cleanup", "chart", target)
-			}
-		}()
+	cleanupFn = func() {
+		klog.V(0).Infof("Cleanup helm chart %s", target)
+		err := releaseCli.Uninstall()
+		if err != nil {
+			klog.V(0).ErrorS(err, "failed to cleanup", "chart", target)
+		}
+	}
 
+	rollingUpdateFn = func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -193,7 +202,8 @@ func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseN
 				}
 			}
 		}
-	}, nil
+	}
+	return rollingUpdateFn, cleanupFn, nil
 }
 
 // NewLoadProfileFromEmbed reads load profile from embed memory.
@@ -326,7 +336,7 @@ func FetchAPIServerCores(ctx context.Context, kubeCfgPath string) (map[string]in
 // FetchNodeProviderIDByType is used to get one node's provider id with a given
 // instance type.
 func FetchNodeProviderIDByType(ctx context.Context, kubeCfgPath string, instanceType string) (string, error) {
-	clientset, err := buildClientset(kubeCfgPath)
+	clientset, err := BuildClientset(kubeCfgPath)
 	if err != nil {
 		return "", err
 	}
@@ -345,8 +355,8 @@ func FetchNodeProviderIDByType(ctx context.Context, kubeCfgPath string, instance
 	return listResp.Items[0].Spec.ProviderID, nil
 }
 
-// buildClientset returns kubernetes clientset.
-func buildClientset(kubeCfgPath string) (*kubernetes.Clientset, error) {
+// BuildClientset returns kubernetes clientset.
+func BuildClientset(kubeCfgPath string) (*kubernetes.Clientset, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeCfgPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build client-go config: %w", err)

@@ -168,7 +168,7 @@ func deployWarmupVirtualNodepool(ctx context.Context, kubeCfgPath string) (func(
 		klog.V(0).ErrorS(err, "failed to delete", "nodepool", target)
 	}
 
-	err = kr.NewNodepool(ctx, 0, target, 100, 110,
+	err = kr.NewNodepool(ctx, 0, target, 100, 32, 96, 110,
 		"node.kubernetes.io/instance-type=m4.2xlarge", sharedProviderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create nodepool %s: %w", target, err)
