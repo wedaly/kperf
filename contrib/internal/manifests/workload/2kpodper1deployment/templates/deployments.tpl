@@ -1,4 +1,5 @@
 {{- $pattern := .Values.pattern }}
+{{- $podSizeInBytes := int .Values.podSizeInBytes }}
 {{- range $index := (untilStep 0 (int .Values.total) 1) }}
 apiVersion: v1
 kind: Namespace
@@ -23,10 +24,14 @@ spec:
   selector:
     matchLabels:
       app: {{ $pattern }}
+      index: "{{ $index }}"
   template:
     metadata:
       labels:
         app: {{ $pattern }}
+        index: "{{ $index }}"
+      annotations:
+        data: "{{ randAlphaNum $podSizeInBytes | nospace }}"
     spec:
       affinity:
         nodeAffinity:

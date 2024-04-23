@@ -109,7 +109,9 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 }
 
 // RepeatRollingUpdate10KPod repeats to rolling-update 10k pods.
-func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseName string, internal time.Duration) (_rollingUpdateFn func(), retErr error) {
+//
+// NOTE: please align with ../manifests/loadprofile/node100_dp5_pod10k.yaml.
+func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseName string, podSizeInBytes int, internal time.Duration) (_rollingUpdateFn func(), retErr error) {
 	target := "workload/2kpodper1deployment"
 	ch, err := manifests.LoadChart(target)
 	if err != nil {
@@ -130,13 +132,14 @@ func RepeatRollingUpdate10KPod(ctx context.Context, kubeCfgPath string, releaseN
 		helmcli.StringPathValuesApplier(
 			fmt.Sprintf("pattern=%s", namePattern),
 			fmt.Sprintf("total=%d", total),
+			fmt.Sprintf("podSizeInBytes=%d", podSizeInBytes),
 		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new helm release cli: %w", err)
 	}
 
-	klog.V(0).InfoS("Deploying deployments", "deployments", total)
+	klog.V(0).InfoS("Deploying deployments", "deployments", total, "podSizeInBytes", podSizeInBytes)
 	err = releaseCli.Deploy(ctx, 10*time.Minute)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
