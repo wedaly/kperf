@@ -6,14 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/kperf/api/types"
-	kperfcmdutils "github.com/Azure/kperf/cmd/kperf/commands/utils"
 	internaltypes "github.com/Azure/kperf/contrib/internal/types"
 	"github.com/Azure/kperf/contrib/internal/utils"
 
 	"github.com/urfave/cli"
-	"gopkg.in/yaml.v2"
-	"k8s.io/klog/v2"
 )
 
 var benchNode100Job1Pod3KCase = cli.Command{
@@ -43,31 +39,8 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	ctx := context.Background()
 	kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
-	var rgSpec types.RunnerGroupSpec
-	rgCfgFile, rgCfgFileDone, err := utils.NewLoadProfileFromEmbed(
-		"loadprofile/node100_job1_pod3k.yaml",
-		func(spec *types.RunnerGroupSpec) error {
-			reqs := cliCtx.Int("total")
-			if reqs < 0 {
-				return fmt.Errorf("invalid total-requests value: %v", reqs)
-			}
-
-			rgAffinity := cliCtx.GlobalString("rg-affinity")
-			affinityLabels, err := kperfcmdutils.KeyValuesMap([]string{rgAffinity})
-			if err != nil {
-				return fmt.Errorf("failed to parse %s affinity: %w", rgAffinity, err)
-			}
-
-			spec.Profile.Spec.Total = reqs
-			spec.NodeAffinity = affinityLabels
-
-			data, _ := yaml.Marshal(spec)
-			klog.V(2).InfoS("Load Profile", "config", string(data))
-
-			rgSpec = *spec
-			return nil
-		},
-	)
+	rgCfgFile, rgSpec, rgCfgFileDone, err := newLoadProfileFromEmbed(cliCtx,
+		"loadprofile/node100_job1_pod3k.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +81,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 		Description: fmt.Sprintf(`
 Environment: 100 virtual nodes managed by kwok-controller,
 Workload: Deploy 1 job with 3,000 pods repeatedly. The parallelism is 100. The interval is %v`, jobInterval),
-		LoadSpec: rgSpec,
+		LoadSpec: *rgSpec,
 		Result:   *rgResult,
 		Info:     make(map[string]interface{}),
 	}, nil

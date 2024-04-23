@@ -1,0 +1,40 @@
+count: 10
+loadProfile:
+  version: 1
+  description: "node100-deployment5-pod10k"
+  spec:
+    rate: 10
+    total: 36000
+    conns: 10
+    client: 100
+    contentType: json
+    disableHTTP2: false
+    maxRetries: 0
+    requests:
+      - staleList:
+          version: v1
+          resource: pods
+          # NOTE: Please align with ../../utils/utils.go#RepeatRollingUpdate10KPod
+          seletor: "app=benchmark"
+          # NOTE: Please align with ../../../cmd/runkperf/commands/bench/node100_dp5_pod10k.go.
+          # And there are only 100 nodes and each node can run 150 pods. It should
+          # have items in the response.
+          fieldSelector: "spec.nodeName=node100dp5pod10k-49"
+        shares: 1000 # 1000 / (1000 + 100 + 200) * 10 = 7.7 req/s
+      - staleList:
+          version: v1
+          resource: pods
+        shares: 100 # 100 / (1000 + 100 + 200) * 10 = 0.7 req/s
+      - quorumList:
+          version: v1
+          resource: pods
+          namespace: benchmark-0
+          # NOTE: It's to simulate the request created by daemonset to get pods,
+          # including kubelet, when they want to get pods from ETCD. The limit
+          # is 100 because it's close to MaxPods value.
+          limit: 100
+          # NOTE: Please align with ../../../cmd/runkperf/commands/bench/node100_dp5_pod10k.go.
+          fieldSelector: "spec.nodeName=node100dp5pod10k-49"
+          # And there are only 100 nodes and each node can run 150 pods. It should
+          # have items in the response.
+        shares: 200 # 200 / (1000 + 100 + 200) * 10 = 1.5 req/s

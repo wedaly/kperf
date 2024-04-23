@@ -179,6 +179,7 @@ type requestListBuilder struct {
 	namespace       string
 	limit           int64
 	labelSelector   string
+	fieldSelector   string
 	resourceVersion string
 	maxRetries      int
 }
@@ -193,6 +194,7 @@ func newRequestListBuilder(src *types.RequestList, resourceVersion string, maxRe
 		namespace:       src.Namespace,
 		limit:           int64(src.Limit),
 		labelSelector:   src.Selector,
+		fieldSelector:   src.FieldSelector,
 		resourceVersion: resourceVersion,
 		maxRetries:      maxRetries,
 	}
@@ -217,6 +219,7 @@ func (b *requestListBuilder) Build(cli rest.Interface) (string, *rest.Request) {
 		SpecificallyVersionedParams(
 			&metav1.ListOptions{
 				LabelSelector:   b.labelSelector,
+				FieldSelector:   b.fieldSelector,
 				ResourceVersion: b.resourceVersion,
 				Limit:           b.limit,
 			},

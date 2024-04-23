@@ -39,6 +39,7 @@ spec:
       resource: pods
       namespace: default
       seletor: app=x2
+      fieldSelector: spec.nodeName=x
     shares: 200
   - quorumList:
       group: core
@@ -94,6 +95,7 @@ spec:
 	assert.Equal(t, "default", target.Spec.Requests[2].StaleList.Namespace)
 	assert.Equal(t, 0, target.Spec.Requests[2].StaleList.Limit)
 	assert.Equal(t, "app=x2", target.Spec.Requests[2].StaleList.Selector)
+	assert.Equal(t, "spec.nodeName=x", target.Spec.Requests[2].StaleList.FieldSelector)
 
 	assert.NotNil(t, target.Spec.Requests[3].QuorumList)
 	assert.Equal(t, 400, target.Spec.Requests[3].Shares)

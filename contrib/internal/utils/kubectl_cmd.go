@@ -172,3 +172,33 @@ func (kr *KubectlRunner) Delete(ctx context.Context, timeout time.Duration, file
 	_, err := runCommand(ctx, timeout, "kubectl", args)
 	return err
 }
+
+// DeploymentRestart restats a deployment.
+func (kr *KubectlRunner) DeploymentRestart(ctx context.Context, timeout time.Duration, name string) error {
+	args := []string{}
+	if kr.kubeCfgPath != "" {
+		args = append(args, "--kubeconfig", kr.kubeCfgPath)
+	}
+	if kr.namespace != "" {
+		args = append(args, "-n", kr.namespace)
+	}
+	args = append(args, "rollout", "restart", "deployment", name)
+
+	_, err := runCommand(ctx, timeout, "kubectl", args)
+	return err
+}
+
+// DeploymentRolloutStatus watches the rollout status of a deployment.
+func (kr *KubectlRunner) DeploymentRolloutStatus(ctx context.Context, timeout time.Duration, name string) error {
+	args := []string{}
+	if kr.kubeCfgPath != "" {
+		args = append(args, "--kubeconfig", kr.kubeCfgPath)
+	}
+	if kr.namespace != "" {
+		args = append(args, "-n", kr.namespace)
+	}
+	args = append(args, "rollout", "status", fmt.Sprintf("deployment/%s", name))
+
+	_, err := runCommand(ctx, timeout, "kubectl", args)
+	return err
+}
