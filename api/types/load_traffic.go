@@ -104,6 +104,8 @@ type RequestList struct {
 	Limit int `json:"limit" yaml:"limit"`
 	// Selector defines how to identify a set of objects.
 	Selector string `json:"seletor" yaml:"seletor"`
+	// FieldSelector defines how to identify a set of objects with field selector.
+	FieldSelector string `json:"fieldSelector" yaml:"fieldSelector"`
 }
 
 // RequestPut defines PUT request for target resource type.
