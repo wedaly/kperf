@@ -72,7 +72,7 @@ func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace strin
 
 	defer func() {
 		klog.V(0).Infof("Cleanup namespace %s", namespace)
-		err := kr.DeleteNamespace(context.TODO(), 5*time.Minute, namespace)
+		err := kr.DeleteNamespace(context.TODO(), 60*time.Minute, namespace)
 		if err != nil {
 			klog.V(0).ErrorS(err, "failed to cleanup", "namespace", namespace)
 		}
