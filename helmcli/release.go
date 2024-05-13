@@ -12,9 +12,12 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"helm.sh/helm/v3/pkg/strvals"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/klog/v2"
 )
 
-var noopLog action.DebugLog = func(_ string, _ ...interface{}) {}
+var debugLog action.DebugLog = func(fmt string, args ...interface{}) {
+	klog.V(2).Infof(fmt, args...)
+}
 
 // ValuesApplier is to apply new key/values to existing chart's values.
 type ValuesApplier func(values map[string]interface{}) error
@@ -96,8 +99,7 @@ type ReleaseCli struct {
 // NewReleaseCli returns new ReleaseCli instance.
 //
 // TODO:
-// 1. show debug log.
-// 2. add flag to disable Wait
+// 1. add flag to disable Wait
 func NewReleaseCli(
 	kubeconfigPath string,
 	namespace string,
@@ -125,7 +127,7 @@ func NewReleaseCli(
 		},
 		namespace,
 		"secret",
-		noopLog,
+		debugLog,
 	); err != nil {
 		return nil, fmt.Errorf("failed to init action config: %w", err)
 	}

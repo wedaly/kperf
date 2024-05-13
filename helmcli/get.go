@@ -24,7 +24,7 @@ func NewGetCli(kubeconfigPath string, namespace string) (*GetCli, error) {
 		},
 		namespace,
 		"secret",
-		noopLog,
+		debugLog,
 	); err != nil {
 		return nil, fmt.Errorf("failed to init action config: %w", err)
 	}
