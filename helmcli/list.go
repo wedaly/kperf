@@ -24,7 +24,7 @@ func NewListCli(kubeconfigPath string, namespace string) (*ListCli, error) {
 		},
 		namespace,
 		"secret",
-		noopLog,
+		debugLog,
 	); err != nil {
 		return nil, fmt.Errorf("failed to init action config: %w", err)
 	}
