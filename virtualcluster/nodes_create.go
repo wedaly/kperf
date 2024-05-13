@@ -86,7 +86,7 @@ func CreateNodepool(ctx context.Context, kubeCfgPath string, nodepoolName string
 	if err != nil {
 		return fmt.Errorf("failed to create helm release client: %w", err)
 	}
-	return releaseCli.Deploy(ctx, 120*time.Second)
+	return releaseCli.Deploy(ctx, 30*time.Minute)
 }
 
 // createNodepoolController creates node controller release.
@@ -113,7 +113,7 @@ func createNodepoolController(ctx context.Context, kubeCfgPath string, cfg *node
 		return nil, fmt.Errorf("failed to create helm release client: %w", err)
 	}
 
-	if err := releaseCli.Deploy(ctx, 120*time.Second); err != nil {
+	if err := releaseCli.Deploy(ctx, 30*time.Minute); err != nil {
 		return nil, fmt.Errorf("failed to deploy virtual node controller: %w", err)
 	}
 	return releaseCli.Uninstall, nil
