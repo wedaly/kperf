@@ -47,7 +47,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	defer func() { _ = rgCfgFileDone() }()
 
 	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100job1pod3k",
-		cliCtx.Int("nodes"),
+		100,
 		cliCtx.Int("cpu"),
 		cliCtx.Int("memory"),
 		cliCtx.Int("max-pods"),
