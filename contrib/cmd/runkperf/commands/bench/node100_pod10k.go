@@ -66,7 +66,12 @@ func benchNode100DeploymentNPod10KRun(cliCtx *cli.Context) (*internaltypes.Bench
 	defer func() { _ = rgCfgFileDone() }()
 
 	// NOTE: The nodepool name should be aligned with ../../../../internal/manifests/loadprofile/node100_pod10k.yaml.
-	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100pod10k", 100, 16, 64, 110)
+	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100pod10k",
+		cliCtx.Int("nodes"),
+		cliCtx.Int("cpu"),
+		cliCtx.Int("memory"),
+		cliCtx.Int("max-pods"),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy virtual node: %w", err)
 	}

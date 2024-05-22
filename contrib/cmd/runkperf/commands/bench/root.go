@@ -50,6 +50,26 @@ var Command = cli.Command{
 			Name:  "result",
 			Usage: "Path to the file which stores results",
 		},
+		cli.IntFlag{
+			Name:  "nodes",
+			Usage: "The number of virtual nodes",
+			Value: 100,
+		},
+		cli.IntFlag{
+			Name:  "cpu",
+			Usage: "The allocatable CPU resource per node",
+			Value: 32,
+		},
+		cli.IntFlag{
+			Name:  "memory",
+			Usage: "The allocatable Memory resource per node (GiB)",
+			Value: 96,
+		},
+		cli.IntFlag{
+			Name:  "max-pods",
+			Usage: "The maximum Pods per node",
+			Value: 110,
+		},
 	},
 	Subcommands: []cli.Command{
 		benchNode100Job1Pod3KCase,
