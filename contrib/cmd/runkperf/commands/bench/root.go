@@ -50,29 +50,33 @@ var Command = cli.Command{
 			Name:  "result",
 			Usage: "Path to the file which stores results",
 		},
-		cli.IntFlag{
-			Name:  "nodes",
-			Usage: "The number of virtual nodes",
-			Value: 100,
-		},
-		cli.IntFlag{
-			Name:  "cpu",
-			Usage: "The allocatable CPU resource per node",
-			Value: 32,
-		},
-		cli.IntFlag{
-			Name:  "memory",
-			Usage: "The allocatable Memory resource per node (GiB)",
-			Value: 96,
-		},
-		cli.IntFlag{
-			Name:  "max-pods",
-			Usage: "The maximum Pods per node",
-			Value: 110,
-		},
 	},
 	Subcommands: []cli.Command{
 		benchNode100Job1Pod3KCase,
 		benchNode100DeploymentNPod10KCase,
+	},
+}
+
+// commonFlags is used as subcommand's option instead of global options.
+//
+// NOTE: The format of global options, like `--option xyz subcommand`, is not
+// easy to extend existing configuration. If the subcommand extends it with
+// its own option, the user can just append options, like `subcommand --options
+// xyz.
+var commonFlags = []cli.Flag{
+	cli.IntFlag{
+		Name:  "cpu",
+		Usage: "the allocatable cpu resource per node",
+		Value: 32,
+	},
+	cli.IntFlag{
+		Name:  "memory",
+		Usage: "The allocatable Memory resource per node (GiB)",
+		Value: 96,
+	},
+	cli.IntFlag{
+		Name:  "max-pods",
+		Usage: "The maximum Pods per node",
+		Value: 110,
 	},
 }
