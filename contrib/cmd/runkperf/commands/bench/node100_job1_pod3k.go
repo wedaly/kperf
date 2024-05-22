@@ -19,13 +19,16 @@ var benchNode100Job1Pod3KCase = cli.Command{
 The test suite is to setup 100 virtual nodes and deploy one job with 3k pods on
 that nodes. It repeats to create and delete job. The load profile is fixed.
 	`,
-	Flags: []cli.Flag{
-		cli.IntFlag{
-			Name:  "total",
-			Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 10)",
-			Value: 36000,
+	Flags: append(
+		[]cli.Flag{
+			cli.IntFlag{
+				Name:  "total",
+				Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 10)",
+				Value: 36000,
+			},
 		},
-	},
+		commonFlags...,
+	),
 	Action: func(cliCtx *cli.Context) error {
 		_, err := renderBenchmarkReportInterceptor(
 			addAPIServerCoresInfoInterceptor(benchNode100Job1Pod3KCaseRun),
@@ -47,7 +50,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	defer func() { _ = rgCfgFileDone() }()
 
 	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100job1pod3k",
-		cliCtx.Int("nodes"),
+		100,
 		cliCtx.Int("cpu"),
 		cliCtx.Int("memory"),
 		cliCtx.Int("max-pods"),

@@ -23,28 +23,31 @@ The test suite is to setup 100 virtual nodes and deploy N deployments for 10k
 pods on that nodes. It repeats to rolling-update deployments one by one during
 benchmark.
 	`,
-	Flags: []cli.Flag{
-		cli.IntFlag{
-			Name:  "deployments",
-			Usage: "The total number of deployments for 10k pods",
-			Value: 20,
+	Flags: append(
+		[]cli.Flag{
+			cli.IntFlag{
+				Name:  "deployments",
+				Usage: "The total number of deployments for 10k pods",
+				Value: 20,
+			},
+			cli.IntFlag{
+				Name:  "total",
+				Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 10)",
+				Value: 36000,
+			},
+			cli.IntFlag{
+				Name:  "padding-bytes",
+				Usage: "Add <key=data, value=randomStringByLen(padding-bytes)> in pod's annotation to increase pod size",
+				Value: 0,
+			},
+			cli.DurationFlag{
+				Name:  "interval",
+				Usage: "Interval to restart deployments",
+				Value: time.Second * 10,
+			},
 		},
-		cli.IntFlag{
-			Name:  "total",
-			Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 10)",
-			Value: 36000,
-		},
-		cli.IntFlag{
-			Name:  "padding-bytes",
-			Usage: "Add <key=data, value=randomStringByLen(padding-bytes)> in pod's annotation to increase pod size",
-			Value: 0,
-		},
-		cli.DurationFlag{
-			Name:  "interval",
-			Usage: "Interval to restart deployments",
-			Value: time.Second * 10,
-		},
-	},
+		commonFlags...,
+	),
 	Action: func(cliCtx *cli.Context) error {
 		_, err := renderBenchmarkReportInterceptor(
 			addAPIServerCoresInfoInterceptor(benchNode100DeploymentNPod10KRun),
@@ -67,7 +70,7 @@ func benchNode100DeploymentNPod10KRun(cliCtx *cli.Context) (*internaltypes.Bench
 
 	// NOTE: The nodepool name should be aligned with ../../../../internal/manifests/loadprofile/node100_pod10k.yaml.
 	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100pod10k",
-		cliCtx.Int("nodes"),
+		100,
 		cliCtx.Int("cpu"),
 		cliCtx.Int("memory"),
 		cliCtx.Int("max-pods"),
