@@ -12,44 +12,44 @@ import (
 	"github.com/urfave/cli"
 )
 
-var benchNode100Job1Pod3KCase = cli.Command{
-	Name: "node100_job1_pod3k",
+var benchNode10Job1Pod100Case = cli.Command{
+	Name: "node10_job1_pod100",
 	Usage: `
 
-The test suite is to setup 100 virtual nodes and deploy one job with 3k pods on
+The test suite is to setup 10 virtual nodes and deploy one job with 100 pods on
 that nodes. It repeats to create and delete job. The load profile is fixed.
 	`,
 	Flags: append(
 		[]cli.Flag{
 			cli.IntFlag{
 				Name:  "total",
-				Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 10)",
-				Value: 36000,
+				Usage: "Total requests per runner (There are 10 runners totally and runner's rate is 1)",
+				Value: 1000,
 			},
 		},
 		commonFlags...,
 	),
 	Action: func(cliCtx *cli.Context) error {
 		_, err := renderBenchmarkReportInterceptor(
-			addAPIServerCoresInfoInterceptor(benchNode100Job1Pod3KCaseRun),
+			addAPIServerCoresInfoInterceptor(benchNode10Job1Pod100CaseRun),
 		)(cliCtx)
 		return err
 	},
 }
 
-// benchNode100Job1Pod3KCaseRun is for benchNode100Job1Pod3KCase subcommand.
-func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.BenchmarkReport, error) {
+// benchNode10Job1Pod100CaseRun is for benchNode10Job1Pod100Case subcommand.
+func benchNode10Job1Pod100CaseRun(cliCtx *cli.Context) (*internaltypes.BenchmarkReport, error) {
 	ctx := context.Background()
 	kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
 	rgCfgFile, rgSpec, rgCfgFileDone, err := newLoadProfileFromEmbed(cliCtx,
-		"loadprofile/node100_job1_pod3k.yaml")
+		"loadprofile/node10_job1_pod100.yaml")
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rgCfgFileDone() }()
 
-	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node100job1pod3k",
+	vcDone, err := deployVirtualNodepool(ctx, cliCtx, "node10job1pod100",
 		100,
 		cliCtx.Int("cpu"),
 		cliCtx.Int("memory"),
@@ -68,7 +68,7 @@ func benchNode100Job1Pod3KCaseRun(cliCtx *cli.Context) (*internaltypes.Benchmark
 	go func() {
 		defer wg.Done()
 
-		utils.RepeatJobWithPod(jobCtx, kubeCfgPath, "job1pod3k", "workload/3kpod.job.yaml", jobInterval)
+		utils.RepeatJobWithPod(jobCtx, kubeCfgPath, "job1pod100", "workload/100pod.job.yaml", jobInterval)
 	}()
 
 	rgResult, derr := utils.DeployRunnerGroup(ctx,

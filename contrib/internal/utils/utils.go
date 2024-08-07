@@ -44,11 +44,9 @@ var (
 	EKSRunnerNodepoolInstanceType = "m4.4xlarge"
 )
 
-// RepeatJobWith3KPod repeats to deploy 3k pods.
-func RepeatJobWith3KPod(ctx context.Context, kubeCfgPath string, namespace string, internal time.Duration) {
+// RepeatJobWithPod repeats to deploy 3k pods.
+func RepeatJobWithPod(ctx context.Context, kubeCfgPath string, namespace string, target string, internal time.Duration) {
 	klog.V(0).Info("Repeat to create job with 3k pods")
-
-	target := "workload/3kpod.job.yaml"
 
 	data, err := manifests.FS.ReadFile(target)
 	if err != nil {
