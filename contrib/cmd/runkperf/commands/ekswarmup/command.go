@@ -117,7 +117,7 @@ var Command = cli.Command{
 		go func() {
 			defer wg.Done()
 
-			utils.RepeatJobWith3KPod(jobCtx, kubeCfgPath, "warmupjob", 5*time.Second)
+			utils.RepeatJobWithPod(jobCtx, kubeCfgPath, "warmupjob", "workload/3kpod.job.yaml", 5*time.Second)
 		}()
 
 		_, derr := utils.DeployRunnerGroup(ctx,
