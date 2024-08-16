@@ -1,14 +1,24 @@
-# Project
+# Kperf
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+Kperf is a benchmark tool for Kubernetes API server.
 
-As the maintainer of this project, please make a few updates:
+It's like [wrk](https://github.com/wg/wrk), but it's designed to generate load and measure latency for Kubernetes API server.
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+## Quick Start
+
+To quickly get started with Kperf, follow these steps:
+
+1. Run the command `make` to build the necessary dependencies.
+
+2. Once the build is complete, execute the following command to start the benchmark:
+
+```bash
+bin/kperf -v 3 runner run --config examples/node10_job1_pod100.yaml
+```
+
+3. The benchmark will generate load and measure the performance of the Kubernetes API server. You will see the results displayed in the terminal, including the total number of requests, duration, error statistics, received bytes, and percentile latencies.
+
+Feel free to adjust the configuration file (`examples/node10_job1_pod100.yaml`) according to your requirements.
 
 ## Contributing
 
@@ -26,8 +36,8 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
+trademarks or logos is subject to and must follow
 [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.
