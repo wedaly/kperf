@@ -65,8 +65,8 @@ func (r *ResponseErrorStats) Merge(from *ResponseErrorStats) {
 type ResponseStats struct {
 	// ErrorStats means summary of errors.
 	ErrorStats ResponseErrorStats
-	// Latencies stores all the observed latencies.
-	Latencies []float64
+	// LatenciesByURL stores all the observed latencies for each request.
+	LatenciesByURL map[string][]float64
 	// TotalReceivedBytes is total bytes read from apiserver.
 	TotalReceivedBytes int64
 }
@@ -80,10 +80,12 @@ type RunnerMetricReport struct {
 	ErrorStats ResponseErrorStats `json:"errorStats"`
 	// TotalReceivedBytes is total bytes read from apiserver.
 	TotalReceivedBytes int64 `json:"totalReceivedBytes"`
-	// Latencies stores all the observed latencies.
-	Latencies []float64 `json:"latencies,omitempty"`
+	// LatenciesByURL stores all the observed latencies.
+	LatenciesByURL map[string][]float64 `json:"latenciesByURL,omitempty"`
 	// PercentileLatencies represents the latency distribution in seconds.
 	PercentileLatencies [][2]float64 `json:"percentileLatencies,omitempty"`
+	// PercentileLatenciesByURL represents the latency distribution in seconds per request.
+	PercentileLatenciesByURL map[string][][2]float64 `json:"percentileLatenciesByURL,omitempty"`
 }
 
 // TODO(weifu): build brand new struct for RunnerGroupsReport to include more

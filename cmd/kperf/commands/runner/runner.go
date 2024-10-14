@@ -188,20 +188,34 @@ func loadConfig(cliCtx *cli.Context) (*types.LoadProfile, error) {
 // printResponseStats prints types.RunnerMetricReport into underlying file.
 func printResponseStats(f *os.File, rawDataFlagIncluded bool, stats *request.Result) error {
 	output := types.RunnerMetricReport{
-		Total:               stats.Total,
-		ErrorStats:          stats.ErrorStats,
-		Duration:            stats.Duration.String(),
-		Latencies:           stats.Latencies,
-		TotalReceivedBytes:  stats.TotalReceivedBytes,
-		PercentileLatencies: metrics.BuildPercentileLatencies(stats.Latencies),
+		Total:              stats.Total,
+		ErrorStats:         stats.ErrorStats,
+		Duration:           stats.Duration.String(),
+		TotalReceivedBytes: stats.TotalReceivedBytes,
+
+		PercentileLatenciesByURL: map[string][][2]float64{},
+	}
+
+	total := 0
+	for _, latencies := range stats.LatenciesByURL {
+		total += len(latencies)
+	}
+	latencies := make([]float64, 0, total)
+	for _, l := range stats.LatenciesByURL {
+		latencies = append(latencies, l...)
+	}
+	output.PercentileLatencies = metrics.BuildPercentileLatencies(latencies)
+
+	for u, l := range stats.LatenciesByURL {
+		output.PercentileLatenciesByURL[u] = metrics.BuildPercentileLatencies(l)
+	}
+
+	if rawDataFlagIncluded {
+		output.LatenciesByURL = stats.LatenciesByURL
 	}
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
-
-	if !rawDataFlagIncluded {
-		output.Latencies = nil
-	}
 
 	err := encoder.Encode(output)
 	if err != nil {

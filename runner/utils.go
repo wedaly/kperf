@@ -58,7 +58,8 @@ func buildNetListeners(addrs []string) (_ []net.Listener, retErr error) {
 // buildRunnerGroupSummary returns aggrecated summary from runner groups' report.
 func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *types.RunnerMetricReport {
 	totalBytes := int64(0)
-	latencies := list.New()
+	totalResp := 0
+	latenciesByURL := map[string]*list.List{}
 	errStats := types.NewResponseErrorStats()
 	maxDuration := 0 * time.Second
 
@@ -90,8 +91,16 @@ func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *type
 			totalBytes += report.TotalReceivedBytes
 
 			// update latencies
-			for _, v := range report.Latencies {
-				latencies.PushBack(v)
+			for u, l := range report.LatenciesByURL {
+				latencies, ok := latenciesByURL[u]
+				if !ok {
+					latenciesByURL[u] = list.New()
+					latencies = latenciesByURL[u]
+				}
+				for _, v := range l {
+					totalResp++
+					latencies.PushBack(v)
+				}
 			}
 
 			// update error stats
@@ -109,12 +118,23 @@ func buildRunnerGroupSummary(s *localstore.Store, groups []*group.Handler) *type
 		}
 	}
 
+	percentileLatenciesByURL := map[string][][2]float64{}
+
+	latencies := make([]float64, 0, totalResp)
+	for u, l := range latenciesByURL {
+		lInSlice := listToSliceFloat64(l)
+
+		latencies = append(latencies, lInSlice...)
+		percentileLatenciesByURL[u] = metrics.BuildPercentileLatencies(lInSlice)
+	}
+
 	return &types.RunnerMetricReport{
-		Total:               latencies.Len(),
-		ErrorStats:          *errStats,
-		Duration:            maxDuration.String(),
-		TotalReceivedBytes:  totalBytes,
-		PercentileLatencies: metrics.BuildPercentileLatencies(listToSliceFloat64(latencies)),
+		Total:                    totalResp,
+		ErrorStats:               *errStats,
+		Duration:                 maxDuration.String(),
+		TotalReceivedBytes:       totalBytes,
+		PercentileLatencies:      metrics.BuildPercentileLatencies(latencies),
+		PercentileLatenciesByURL: percentileLatenciesByURL,
 	}
 }
 
