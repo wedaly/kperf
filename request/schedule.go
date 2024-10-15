@@ -87,7 +87,7 @@ func Schedule(ctx context.Context, spec *types.LoadProfileSpec, restCli []rest.I
 						klog.V(5).Infof("Request stream failed: %v", err)
 						return
 					}
-					respMetric.ObserveLatency(latency)
+					respMetric.ObserveLatency(req.URL().String(), latency)
 				}()
 			}
 		}(cli)
