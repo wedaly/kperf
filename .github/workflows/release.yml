@@ -1,8 +1,6 @@
 name: Release
 on:
   push:
-    branches:
-      - "add-release-workflow"
     tags:
       - v*
 env:
