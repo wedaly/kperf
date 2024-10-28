@@ -1,24 +1,34 @@
-# Kperf
+# kperf - a kube-apiserver benchmark tool
 
-Kperf is a benchmark tool for Kubernetes API server.
+kperf is a benchmarking tool for the Kubernetes API server that allows users to
+conduct high-load testing on simulated clusters. Its primary purpose is to emulate
+clusters larger than the actual environment, helping to uncover potential control
+plane issues based on the user's workload scale. This tool provides an efficient,
+cost-effective way for users to validate the performance and stability of their
+Kubernetes API server.
 
-It's like [wrk](https://github.com/wg/wrk), but it's designed to generate load and measure latency for Kubernetes API server.
+# Why kperf?
 
-## Quick Start
+kperf offers unique advantages over tools like kubemark by simulating a broader
+range of traffic patterns found in real Kubernetes workloads. While kubemark
+primarily emulates kubelet traffic, kperf can replicate complex interactions
+typically associated with controllers, operators, and daemonsets. This includes
+scenarios like stale list requests from the API server cache, quorum-based list
+operations that directly impact etcd, and informer cache lists and watch behaviors.
+By covering these additional traffic types, kperf provides a more comprehensive
+view of control plane performance and stability, making it an essential tool for
+understanding how a cluster will handle high-load scenarios across diverse workload patterns.
 
-To quickly get started with Kperf, follow these steps:
+## Getting Started
 
-1. Run the command `make` to build the necessary dependencies.
+See documentation on [Getting-Started](/docs/getting-started.md)
 
-2. Once the build is complete, execute the following command to start the benchmark:
+## Running in Cluster
 
-```bash
-bin/kperf -v 3 runner run --config examples/node10_job1_pod100.yaml
-```
+The `kperf` commands offer low-level functions to measure that target kube-apiserver.
+You may need example to combine these functions to run example benchmark test.
 
-3. The benchmark will generate load and measure the performance of the Kubernetes API server. You will see the results displayed in the terminal, including the total number of requests, duration, error statistics, received bytes, and percentile latencies.
-
-Feel free to adjust the configuration file (`examples/node10_job1_pod100.yaml`) according to your requirements.
+See documentation on [runkperf](/docs/runkperf.md) for more detail.
 
 ## Contributing
 
