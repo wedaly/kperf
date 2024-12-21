@@ -13,17 +13,17 @@ runkperf includes three benchmark scenarios, one of which focuses on measuring
 performance and stability with 3,000 short-lifecycle pods distributed across 100 nodes.
 
 ```bash
-$ runkperf bench --runner-image telescope.azurect.io/oss/kperf:v0.1.5 node100_job1_pod3k --help
+$ runkperf bench --runner-image ghcr.io/azure/kperf:0.1.8 node10_job1_pod100 --help
 
 NAME:
-   runkperf bench node100_job1_pod3k -
+   runkperf bench node10_job1_pod100 -
 
-The test suite is to setup 100 virtual nodes and deploy one job with 3k pods on
+The test suite is to setup 10 virtual nodes and deploy one job with 100 pods on
 that nodes. It repeats to create and delete job. The load profile is fixed.
 
 
 USAGE:
-   runkperf bench node100_job1_pod3k [command options] [arguments...]
+   runkperf bench node10_job1_pod100 [command options] [arguments...]
 
 OPTIONS:
    --total value         Total requests per runner (There are 10 runners totally and runner's rate is 10) (default: 36000)
@@ -33,19 +33,19 @@ OPTIONS:
    --content-type value  Content type (json or protobuf) (default: "json")
 ```
 
-This test eliminates the need to set up 100 physical nodes, as kperf leverages
+This test eliminates the need to set up many physical nodes, as kperf leverages
 [kwok](https://github.com/kubernetes-sigs/kwok) to simulate both nodes and pod
-lifecycles. Only a few physical nodes are required to host **5** kperf runners
-and **100** kwok controllers.
+lifecycles. Only a few physical nodes are required to run large scale benchmark
+with **5** kperf runners and **100** kwok controllers.
 
 We **recommend** using two separate node pools in the target Kubernetes cluster
 to host the kperf runners and Kwok controllers independently. By default, runkperf
 schedules:
 
-* Runners on nodes with instance type: **Standard_D16s_v3** on Azure or **m4.4xlarge** on AWS
-* kwok controllers on nodes with instance type: **Standard_D8s_v3** on Azure or **m4.2xlarge** on AWS
+* Runners on nodes with instance type: **Standard_D16s_v3** on Azure or **m4.4xlarge** on AWS or **n1-standard-8** on GCP
+* kwok controllers on nodes with instance type: **Standard_D8s_v3** on Azure or **m4.2xlarge** on AWS or **n1-standard-16** on GCP
 
-You can modify the scheduling affinity for runners and controllers using the 
+You can modify the scheduling affinity for runners and controllers using the
 `--rg-affinity` and `--vc-affinity` options. Please check `runkperf bench --help` for more details.
 
 When that target cluster is ready, you can run
@@ -53,8 +53,8 @@ When that target cluster is ready, you can run
 ```bash
 $ sudo runkperf -v 3 bench \
   --kubeconfig $HOME/.kube/config \
-  --runner-image telescope.azurecr.io/oss/kperf:v0.1.5 \
-  node100_job1_pod3k --total 1000
+  --runner-image ghcr.io/azure/kperf:0.1.8 \
+  node10_job1_pod100 --total 1000
 ```
 
 > NOTE: The `sudo` allows that command to create [mount_namespaces(7)](https://man7.org/linux/man-pages/man7/mount_namespaces.7.html)

@@ -84,6 +84,11 @@ var nodepoolAddCommand = cli.Command{
 
 		kubeCfgPath := cliCtx.GlobalString("kubeconfig")
 
+		err := utils.ApplyPriorityLevelConfiguration(kubeCfgPath)
+		if err != nil {
+			return fmt.Errorf("failed to apply priority level configuration: %w", err)
+		}
+
 		affinityLabels, err := utils.KeyValuesMap(cliCtx.StringSlice("affinity"))
 		if err != nil {
 			return fmt.Errorf("failed to parse affinity: %w", err)

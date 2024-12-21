@@ -4,11 +4,16 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	flowcontrolv1beta3 "k8s.io/api/flowcontrol/v1beta3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
 
@@ -59,4 +64,54 @@ func inCluster() bool {
 
 	return os.Getenv("KUBERNETES_SERVICE_HOST") != "" &&
 		os.Getenv("KUBERNETES_SERVICE_PORT") != ""
+}
+
+// ApplyPriorityLevelConfiguration applies the PriorityLevelConfiguration manifest using kubectl.
+func ApplyPriorityLevelConfiguration(kubeconfigPath string) error {
+	// Load the kubeconfig file
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to load kubeconfig: %v", err)
+	}
+
+	// Create a Kubernetes client
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to create Kubernetes client: %v", err)
+	}
+
+	// Define the PriorityLevelConfiguration
+	lendablePercent := int32(30)
+	plc := &flowcontrolv1beta3.PriorityLevelConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "flowcontrol.apiserver.k8s.io/v1beta3",
+			Kind:       "PriorityLevelConfiguration",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "custom-system",
+		},
+		Spec: flowcontrolv1beta3.PriorityLevelConfigurationSpec{
+			Type: flowcontrolv1beta3.PriorityLevelEnablementLimited,
+			Limited: &flowcontrolv1beta3.LimitedPriorityLevelConfiguration{
+				LendablePercent: &lendablePercent,
+				LimitResponse: flowcontrolv1beta3.LimitResponse{
+					Type: flowcontrolv1beta3.LimitResponseTypeQueue,
+					Queuing: &flowcontrolv1beta3.QueuingConfiguration{
+						Queues:           64,
+						HandSize:         6,
+						QueueLengthLimit: 50,
+					},
+				},
+			},
+		},
+	}
+
+	// Apply the PriorityLevelConfiguration
+	_, err = clientset.FlowcontrolV1beta3().PriorityLevelConfigurations().Create(context.TODO(), plc, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to apply PriorityLevelConfiguration: %v", err)
+	}
+
+	fmt.Printf("Successfully applied PriorityLevelConfiguration: %s\n", plc.Name)
+	return nil
 }

@@ -44,6 +44,22 @@ sudo make install
 By default, the binaries will be in `/usr/local/bin`. The install prefix can be
 changed by passing the `PREFIX` variable (default: `/usr/local`).
 
+## Getting KubeConfig
+### Azure
+```bash
+az aks get-credentials --location <REGION> --resource-group <RESOURCE_GROUP> --name <CLUSTER_NAME> --overwrite-existing
+```
+
+### AWS
+```bash
+eksctl utils write-kubeconfig --cluster=<CLUSTER_NAME> --region=<REGION>
+```
+
+### GCP
+```bash
+gcloud container clusters get-credentials <CLUSTER_NAME> --region <REGION>
+```
+
 ## Using kperf
 
 ### kperf-runner run
@@ -219,7 +235,7 @@ If you want to run benchmark in Kubernetes cluster, please use `kperf runnergrou
 
 ### kperf-runnergroup
 
-The `kperf runnergroup` command manages a group of runners within a target Kubernetes cluster. 
+The `kperf runnergroup` command manages a group of runners within a target Kubernetes cluster.
 A runner group consists of multiple runners, with each runner deployed as an individual Pod for the `kperf runner` process.
 These runners not only generate requests within the cluster but can also issue requests from multiple endpoints,
 mitigating limitations such as network bandwidth constraints.
@@ -274,14 +290,14 @@ loadProfile:
 # nodeAffinity defines how to deploy runners into dedicated nodes which have specific labels.
 nodeAffinity:
   node.kubernetes.io/instance-type:
-    - Standard_DS2_v2
+    - n1-standard-16
 ```
 
 Let's say the local file `/tmp/example-runnergroup-spec.yaml`. You can run:
 
 ```bash
 $ kperf rg run \
-  --runner-image=telescope.azurecr.io/oss/kperf:v0.1.5 \
+  --runner-image=ghcr.io/azure/kperf:0.1.8 \
   --runnergroup="file:///tmp/example-runnergroup-spec.yaml"
 ```
 
@@ -446,7 +462,7 @@ You can use the following command to add nodepool named by `example` with 10 nod
 ```bash
 $ kperf vc nodepool add example \
   --nodes=10 --cpu=32 --memory=96 --max-pods=50 \
-  --affinity="node.kubernetes.io/instance-type=Standard_DS2_v2"
+  --affinity="node.kubernetes.io/instance-type=n1-standard-16"
 ```
 
 > NOTE: The `--affinity` is used to deploy node controller (kwok) to nodes with the specific labels.

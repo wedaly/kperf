@@ -44,6 +44,10 @@ image-push: image-build ## push image
 	@echo pushing ${IMAGE_NAME}
 	@docker push ${IMAGE_NAME}
 
+image-clean: ## clean image
+	@echo cleaning ${IMAGE_NAME}
+	@docker rmi ${IMAGE_NAME}
+
 test: ## run test
 	@go test -v ./...
 
@@ -53,6 +57,7 @@ lint: ## run lint
 .PHONY: clean
 clean: ## clean up binaries
 	@rm -f $(BINARIES)
+	@rm -f $(CONTRIB_BINARIES)
 
 .PHONY: help
 help: ## this help
