@@ -5,6 +5,7 @@ set -e
 CILIUM_VERSION="v1.16.6"
 NUM_CILIUM_ENDPOINTS=500000 # 5k nodes x 100 pods per node
 NUM_CILIUM_IDENTITIES=50000 # based on outages we've seen with CID spikes
+BATCH_SIZE=1000
 
 # Assume that kubectl is already configured with access to the test cluster.
 # That cluster should NOT have cilium installed -- we'll create the Cilium custom resources ourselves
@@ -14,9 +15,6 @@ NUM_CILIUM_IDENTITIES=50000 # based on outages we've seen with CID spikes
 echo "Loading Cilium CRDs"
 kubectl apply -f "https://raw.githubusercontent.com/cilium/cilium/refs/tags/$CILIUM_VERSION/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumendpoints.yaml"
 kubectl apply -f "https://raw.githubusercontent.com/cilium/cilium/refs/tags/$CILIUM_VERSION/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumidentities.yaml"
-
-# Batch size for kubectl apply
-BATCH_SIZE=100
 
 # Create CiliumIdentity custom resources in batches
 initial_num_cid="$(kubectl get ciliumidentities --no-headers | wc -l || "0")"
