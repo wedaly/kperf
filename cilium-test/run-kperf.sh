@@ -2,5 +2,8 @@
 
 set -xe
 
-../bin/kperf rg run --runner-image=telescope.azurecr.io/oss/kperf:v0.1.6 --runnergroup="file://$(pwd)/runnergroup-spec.yaml"
+# KPERF_IMAGE="telescope.azurecr.io/oss/kperf:v0.1.6"
+KPERF_IMAGE="widalytest.azurecr.io/kperf:widalytest001"
+
+../bin/kperf rg run --runner-image=$KPERF_IMAGE --runnergroup="file://$(pwd)/runnergroup-spec.yaml"
 ../bin/kperf rg result
