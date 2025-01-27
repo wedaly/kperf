@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"path"
 	"sync"
 
 	"github.com/Azure/kperf/api/types"
@@ -212,6 +213,9 @@ func (b *requestListBuilder) Build(cli rest.Interface) (string, *rest.Request) {
 		comps = append(comps, "namespaces", b.namespace)
 	}
 	comps = append(comps, b.resource)
+
+	// DEBUG
+	fmt.Printf("DEBUG: req URI = %q\n", path.Join(comps...))
 
 	return "LIST", cli.Get().AbsPath(comps...).
 		SpecificallyVersionedParams(
