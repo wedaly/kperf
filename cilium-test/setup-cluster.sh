@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 CILIUM_VERSION="v1.16.6"
 NUM_CILIUM_ENDPOINTS=500000 # 5k nodes x 100 pods per node
@@ -11,6 +11,7 @@ NUM_CILIUM_IDENTITIES=50000 # based on outages we've seen with CID spikes
 # and don't want any of the cilium components modifying these.
 
 # First, load the Cilium CRDs. Arbitrarily use Cilium 1.16.
+echo "Loading Cilium CRDs"
 kubectl apply -f "https://raw.githubusercontent.com/cilium/cilium/refs/tags/$CILIUM_VERSION/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumendpoints.yaml"
 kubectl apply -f "https://raw.githubusercontent.com/cilium/cilium/refs/tags/$CILIUM_VERSION/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumidentities.yaml"
 
