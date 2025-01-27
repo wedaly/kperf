@@ -11,8 +11,7 @@ loadProfile:
   description: cilium list profile
   spec:
     rate: 20
-    #total: 12000 # run for ~10 minutes, 600 seconds * 20/sec = 12000
-    total: 100
+    total: 12000 # run for ~10 minutes, 600 seconds * 20/sec = 12000
     # 5k node cluster, one cilium agent per node
     # divided by the number of runners.
     conns: 500
