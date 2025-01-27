@@ -28,12 +28,12 @@ loadProfile:
       - staleList:
           group: cilium.io
           version: v2
-          resource: ciliumidentity
+          resource: ciliumidentities
         shares: 1000 # Has 50% chance = 1000 / (1000 + 1000)
       - staleList:
           group: cilium.io
           version: v2
-          resource: ciliumendpoint
+          resource: ciliumendpoints
           namespace: "default"
         shares: 1000 # Has 50% chance = 1000 / (1000 + 1000)
 
