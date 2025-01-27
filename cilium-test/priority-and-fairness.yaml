@@ -1,0 +1,46 @@
+# TODO (widaly): k8s version check to decide flowcontrol.apiserver.k8s.io/v1 or v1beta3
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: FlowSchema
+metadata:
+ name: cilium-list
+spec:
+ distinguisherMethod:
+   type: ByUser
+ matchingPrecedence: 800 # lower than default 1000
+ priorityLevelConfiguration:
+   name: cilium-priority
+ rules:
+   - resourceRules:
+       - apiGroups:
+           - 'cilium.io'
+         clusterScope: true
+         namespaces:
+           - '*'
+         resources:
+           - 'ciliumendpoints'
+           - 'ciliumendpointslices'
+           - 'ciliumidentities'
+         verbs:
+           - 'list'
+     subjects:
+       - kind: ServiceAccount
+         serviceAccount:
+           name: runnergroup-server
+           namespace: runnergroups-kperf-io
+       #- kind: ServiceAccount
+       #  serviceAccount:
+       #    name: cilium
+       #    namespace: kube-system
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: PriorityLevelConfiguration
+metadata:
+ name: cilium-priority
+spec:
+ type: Limited
+ limited:
+   nominalConcurrencyShares: 20 # interpret this as "at most 20% of execution seats"
+   borrowingLimitPercent: 0     # prevent cilium from borrowing from other queues (and possibly OOM'ing apiserver)
+   lendablePercent: 100         # allow other reqs to borrow
+   limitResponse:
+     type: Reject               # immediately reject requests instead of queueing
