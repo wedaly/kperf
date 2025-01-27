@@ -1,4 +1,3 @@
-# TODO (widaly): k8s version check to decide flowcontrol.apiserver.k8s.io/v1 or v1beta3
 apiVersion: flowcontrol.apiserver.k8s.io/v1
 kind: FlowSchema
 metadata:
