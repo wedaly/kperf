@@ -36,4 +36,5 @@ loadProfile:
 
 # nodeAffinity defines how to deploy runners into dedicated nodes which have specific labels.
 nodeAffinity:
-  kperf: "true"
+  kperf:
+    - "true"
