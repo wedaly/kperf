@@ -6,6 +6,7 @@ CLUSTER_NAME=""
 
 az account set -s "$SUBSCRIPTION"
 az aks create -g "$RESOURCE_GROUP" -n "$CLUSTER_NAME" \
+    --tier standard \
     --network-plugin azure \
     --network-plugin-mode overlay \
     --network-dataplane azure
