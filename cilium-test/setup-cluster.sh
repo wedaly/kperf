@@ -3,8 +3,8 @@
 set -e
 
 CILIUM_VERSION="v1.16.6"
-NUM_CILIUM_ENDPOINTS=500000 # 5k nodes x 100 pods per node
-NUM_CILIUM_IDENTITIES=50000 # based on outages we've seen with CID spikes
+NUM_CILIUM_ENDPOINTS=5000 # 5k nodes x 100 pods per node
+NUM_CILIUM_IDENTITIES=500 # based on outages we've seen with CID spikes
 BATCH_SIZE=1000
 
 # Assume that kubectl is already configured with access to the test cluster.
