@@ -20,6 +20,8 @@ loadProfile:
     disableHTTP2: false
 
     # 50/50 mix of ciliumidentity and ciliumendpoint queries.
+    # This uses staleList (resourceVersion="0") to simulate the case where Cilium attempts to retrieve
+    # all data from the server (client-go cache is empty).
     # We're simulating with CilumEndpointSlice disabled here, on the assumption that CES will always
     # have lower count than CEP, so if we can survive with CEP only then we're in good shape.
     requests:
