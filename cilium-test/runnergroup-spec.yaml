@@ -1,42 +1,37 @@
 # count defines how many runners in the group.
 count: 10
 
-# loadProfile defines what the load traffic looks like.
-# All the runners in this group will use the same load profile.
+# This simulates worst-case behavior for Cilium:
+# every agent hammering apiserver with stale LIST requests for CiliumIdentity and CiliumEndpoint.
+# The request rate is much, much higher than what we'd expect to see in production with
+# client-go exponential backoff configured, so if apiserver can survive this onslaught it can
+# survive anything Cilium throws at it.
 loadProfile:
   version: 1
-  description: example profile
+  description: cilium list profile
   spec:
-    # rate defines the maximum requests per second (zero is no limit).
-    rate: 100
+    rate: 20
+    total: 100000
+    # 5k node cluster, one cilium agent per node
+    conns: 5000
+    client: 5000
 
-    # total defines the total number of requests.
-    total: 10
-
-    # conns defines total number of individual transports used for traffic.
-    conns: 100
-
-    # client defines total number of HTTP clients.
-    client: 1000
-
-    # contentType defines response's content type. (json or protobuf)
     contentType: json
-
-    # disableHTTP2 means client will use HTTP/1.1 protocol if it's true.
     disableHTTP2: false
 
-    # pick up requests randomly based on defined weight.
+    # 50/50 mix of ciliumidentity and ciliumendpoint queries.
+    # We're simulating with CilumEndpointSlice disabled here, on the assumption that CES will always
+    # have lower count than CEP, so if we can survive with CEP only then we're in good shape.
     requests:
-      # staleList means this list request with zero resource version.
       - staleList:
-          version: v1
-          resource: pods
+          group: cilium.io
+          version: v2
+          resource: ciliumidentity
         shares: 1000 # Has 50% chance = 1000 / (1000 + 1000)
-      # quorumList means this list request without kube-apiserver cache.
-      - quorumList:
-          version: v1
-          resource: pods
-          limit: 1000
+      - staleList:
+          group: cilium.io
+          version: v2
+          resource: ciliumendpoint
         shares: 1000 # Has 50% chance = 1000 / (1000 + 1000)
 
 # nodeAffinity defines how to deploy runners into dedicated nodes which have specific labels.
