@@ -15,15 +15,18 @@ echo "Loading Cilium CRDs"
 kubectl apply -f "https://raw.githubusercontent.com/cilium/cilium/refs/tags/$CILIUM_VERSION/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumendpoints.yaml"
 kubectl apply -f "https://raw.githubusercontent.com/cilium/cilium/refs/tags/$CILIUM_VERSION/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumidentities.yaml"
 
-# Next, create CiliumEndpoint and CiliumIdentity custom resources.
-# These are the Cilium resources that scale with the number of pods in a cluster
-# and generate the most load on apiserver.
-# The contents of these resources don't particularly matter for this test; we're mostly
-# interested in the total count and size of the objects.
+# Batch size for kubectl apply
+BATCH_SIZE=100
+
+# Create CiliumIdentity custom resources in batches
 initial_num_cid="$(kubectl get ciliumidentities --no-headers | wc -l || "0")"
-for i in $(seq $initial_num_cid $NUM_CILIUM_IDENTITIES); do
-cid_name=$(printf "%06d" $i)
-cat <<EOF | kubectl apply -f -
+for ((i=initial_num_cid; i<=$NUM_CILIUM_IDENTITIES; i+=BATCH_SIZE)); do
+  echo "Creating CiliumIdentity batch $((i/BATCH_SIZE + 1))"
+  batch=""
+  for ((j=i; j<i+BATCH_SIZE && j<=$NUM_CILIUM_IDENTITIES; j++)); do
+    cid_name=$(printf "%06d" $j)
+    batch+=$(cat <<EOF
+
 apiVersion: cilium.io/v2
 kind: CiliumIdentity
 metadata:
@@ -40,14 +43,23 @@ security-labels:
   k8s:k8s-app: kube-dns
   k8s:kubernetes.azure.com/managedby: aks
   k8s:version: v20
+---
 EOF
+)
+  done
+  echo "$batch" | kubectl apply -f -
 done
 
+# Create CiliumEndpoint custom resources in batches
 initial_num_cep="$(kubectl get ciliumendpoints --no-headers | wc -l || "0")"
-for i in $(seq $initial_num_cep $NUM_CILIUM_ENDPOINTS); do
-cep_name=$(printf "%06d" $i)
-cid_name=$(printf "%06d" $((i % NUM_CILIUM_IDENTITIES)))
-cat <<EOF | kubectl apply -f -
+for ((i=initial_num_cep; i<=$NUM_CILIUM_ENDPOINTS; i+=BATCH_SIZE)); do
+  echo "Creating CiliumEndpoint batch $((i/BATCH_SIZE + 1))"
+  batch=""
+  for ((j=i; j<i+BATCH_SIZE && j<=$NUM_CILIUM_ENDPOINTS; j++)); do
+    cep_name=$(printf "%06d" $j)
+    cid_name=$(printf "%06d" $((j % NUM_CILIUM_IDENTITIES)))
+    batch+=$(cat <<EOF
+
 apiVersion: cilium.io/v2
 kind: CiliumEndpoint
 metadata:
@@ -97,5 +109,9 @@ status:
       state: <status disabled>
   state: ready
   visibility-policy-status: <status disabled>
+---
 EOF
+)
+  done
+  echo "$batch" | kubectl apply -f -
 done
