@@ -13,8 +13,9 @@ loadProfile:
     rate: 20
     total: 100000
     # 5k node cluster, one cilium agent per node
-    conns: 5000
-    client: 5000
+    # divided by the number of runners.
+    conns: 500
+    client: 500
 
     contentType: json
     disableHTTP2: false
