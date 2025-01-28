@@ -161,6 +161,21 @@ func (kr *KubectlRunner) Apply(ctx context.Context, timeout time.Duration, fileP
 	return err
 }
 
+// ServerSideApplyWithData runs kubectl apply with --server-side=true, with input data piped through stdin.
+func (kr *KubectlRunner) ServerSideApplyWithData(ctx context.Context, timeout time.Duration, data string) error {
+	args := []string{}
+	if kr.kubeCfgPath != "" {
+		args = append(args, "--kubeconfig", kr.kubeCfgPath)
+	}
+	if kr.namespace != "" {
+		args = append(args, "-n", kr.namespace)
+	}
+	args = append(args, "apply", "--server-side=true", "--validate=ignore", "-f", "-")
+
+	_, err := runCommandWithInput(ctx, timeout, "kubectl", args, data)
+	return err
+}
+
 // Delete runs delete subcommand.
 func (kr *KubectlRunner) Delete(ctx context.Context, timeout time.Duration, filePath string) error {
 	args := []string{}

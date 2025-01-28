@@ -402,6 +402,27 @@ func runCommand(ctx context.Context, timeout time.Duration, cmd string, args []s
 	return output, nil
 }
 
+// runCommandWithInput executes a command with `input` piped through stdin.
+func runCommandWithInput(ctx context.Context, timeout time.Duration, cmd string, args []string, input string) ([]byte, error) {
+	var cancel context.CancelFunc
+	if timeout != 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	c := exec.CommandContext(ctx, cmd, args...)
+	c.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
+	c.Stdin = strings.NewReader(input)
+
+	klog.V(2).Infof("[CMD] %s", c.String())
+	output, err := c.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to invoke %s:\n (output: %s): %w",
+			c.String(), strings.TrimSpace(string(output)), err)
+	}
+	return output, nil
+}
+
 // CreateTempFileWithContent creates temporary file with data.
 func CreateTempFileWithContent(data []byte) (_name string, _cleanup func() error, retErr error) {
 	f, err := os.CreateTemp("", "temp*")

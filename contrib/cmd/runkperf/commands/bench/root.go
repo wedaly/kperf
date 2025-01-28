@@ -58,6 +58,7 @@ var Command = cli.Command{
 		benchNode10Job1Pod100Case,
 		benchNode100Job1Pod3KCase,
 		benchNode100DeploymentNPod10KCase,
+		benchCiliumCustomResourceListCase,
 	},
 }
 
