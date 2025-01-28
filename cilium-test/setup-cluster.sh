@@ -45,7 +45,7 @@ security-labels:
 EOF
 )
   done
-  echo "$batch" | kubectl apply -f -
+  echo "$batch" | kubectl apply --server-side=true -f -
 done
 
 # Create CiliumEndpoint custom resources in batches
@@ -111,5 +111,5 @@ status:
 EOF
 )
   done
-  echo "$batch" | kubectl apply -f -
+  echo "$batch" | kubectl --server-side=true apply -f -
 done
