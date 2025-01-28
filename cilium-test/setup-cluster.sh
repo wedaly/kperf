@@ -3,7 +3,7 @@
 set -e
 
 CILIUM_VERSION="v1.16.6"
-NUM_CILIUM_ENDPOINTS=500000 # 5k nodes x 100 pods per node
+NUM_CILIUM_ENDPOINTS=100000 # 5k nodes x 20 pods per node
 NUM_CILIUM_IDENTITIES=50000 # based on outages we've seen with CID spikes
 BATCH_SIZE=1000
 
