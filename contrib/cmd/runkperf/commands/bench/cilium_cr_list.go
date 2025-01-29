@@ -19,6 +19,8 @@ import (
 
 const (
 	numCRApplyWorkers      = 50
+	maxNumCRApplyAttempts  = 5
+	kubectlApplyTimeout    = 30 * time.Second
 	progressReportInterval = 10 * time.Second
 	installCiliumCRDsFlag  = "install-cilium-crds"
 	numCEPFlag             = "num-cilium-endpoints"
@@ -117,7 +119,7 @@ var ciliumCRDs = []string{
 func installCiliumCRDs(ctx context.Context, kr *utils.KubectlRunner) error {
 	klog.V(0).Info("Installing Cilium CRDs...")
 	for _, crdURL := range ciliumCRDs {
-		err := kr.Apply(ctx, 60*time.Second, crdURL)
+		err := kr.Apply(ctx, kubectlApplyTimeout, crdURL)
 		if err != nil {
 			return fmt.Errorf("failed to apply CRD %s: %v", crdURL, err)
 		}
@@ -143,11 +145,19 @@ func loadCiliumData(ctx context.Context, kr *utils.KubectlRunner, numCID int, nu
 					if !ok {
 						return nil // taskChan closed
 					}
-					err := kr.ServerSideApplyWithData(ctx, 60*time.Second, ciliumResourceData)
-					if err != nil {
+					var err error
+					for i := 0; i < maxNumCRApplyAttempts; i++ {
+						err = kr.ServerSideApplyWithData(ctx, kubectlApplyTimeout, ciliumResourceData)
+						if err == nil {
+							appliedCount.Add(1)
+							break
+						} else if i < maxNumCRApplyAttempts-1 {
+							klog.Warningf("Failed to apply cilium resource data, will retry: %s", err)
+						}
+					}
+					if err != nil { // last retry failed, so give up.
 						return fmt.Errorf("failed to apply cilium resource data: %w", err)
 					}
-					appliedCount.Add(1)
 				}
 			}
 		})
