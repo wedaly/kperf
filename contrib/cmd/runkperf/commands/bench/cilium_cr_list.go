@@ -165,11 +165,14 @@ func loadCiliumData(ctx context.Context, kr *utils.KubectlRunner, numCID int, nu
 	}
 
 	// Report progress periodically.
+	reporterDoneChan := make(chan struct{})
 	g.Go(func() error {
 		timer := time.NewTicker(progressReportInterval)
 		defer timer.Stop()
 		for {
 			select {
+			case <-reporterDoneChan:
+				return nil
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-timer.C:
@@ -199,6 +202,7 @@ func loadCiliumData(ctx context.Context, kr *utils.KubectlRunner, numCID int, nu
 		}
 
 		close(taskChan) // signal to consumer goroutines that we're done.
+		close(reporterDoneChan)
 		return nil
 	})
 
