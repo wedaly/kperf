@@ -11,6 +11,7 @@ import (
 
 	internaltypes "github.com/Azure/kperf/contrib/internal/types"
 	"github.com/Azure/kperf/contrib/internal/utils"
+	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/klog/v2"
 
@@ -185,7 +186,7 @@ func loadCiliumData(ctx context.Context, kr *utils.KubectlRunner, numCID int, nu
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case taskChan <- generateCiliumIdentity(i):
+			case taskChan <- generateCiliumIdentity():
 			}
 		}
 
@@ -193,7 +194,7 @@ func loadCiliumData(ctx context.Context, kr *utils.KubectlRunner, numCID int, nu
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case taskChan <- generateCiliumEndpoint(i):
+			case taskChan <- generateCiliumEndpoint():
 			}
 		}
 
@@ -210,8 +211,8 @@ func loadCiliumData(ctx context.Context, kr *utils.KubectlRunner, numCID int, nu
 	return nil
 }
 
-func generateCiliumIdentity(i int) string {
-	identityName := fmt.Sprintf("%06d", i)
+func generateCiliumIdentity() string {
+	identityName := uuid.New().String()
 	return fmt.Sprintf(`
 apiVersion: cilium.io/v2
 kind: CiliumIdentity
@@ -230,8 +231,8 @@ security-labels:
   k8s:version: v20`, identityName)
 }
 
-func generateCiliumEndpoint(i int) string {
-	cepName := fmt.Sprintf("%06d", i)
+func generateCiliumEndpoint() string {
+	cepName := uuid.New().String()
 	return fmt.Sprintf(`
 apiVersion: cilium.io/v2
 kind: CiliumEndpoint
