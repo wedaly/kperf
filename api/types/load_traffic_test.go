@@ -68,6 +68,14 @@ spec:
       tailLines: 1000
       limitBytes: 1024
     shares: 10
+  - watchList:
+      group: core
+      version: v1
+      resource: pods
+      namespace: default
+      seletor: app=x2
+      fieldSelector: spec.nodeName=x
+    shares: 250
 `
 
 	target := LoadProfile{}
@@ -77,7 +85,7 @@ spec:
 	assert.Equal(t, float64(100), target.Spec.Rate)
 	assert.Equal(t, 10000, target.Spec.Total)
 	assert.Equal(t, 2, target.Spec.Conns)
-	assert.Len(t, target.Spec.Requests, 6)
+	assert.Len(t, target.Spec.Requests, 7)
 
 	assert.Equal(t, 100, target.Spec.Requests[0].Shares)
 	assert.NotNil(t, target.Spec.Requests[0].StaleGet)
@@ -94,7 +102,7 @@ spec:
 	assert.NotNil(t, target.Spec.Requests[2].StaleList)
 	assert.Equal(t, "pods", target.Spec.Requests[2].StaleList.Resource)
 	assert.Equal(t, "v1", target.Spec.Requests[2].StaleList.Version)
-	assert.Equal(t, "core", target.Spec.Requests[0].StaleGet.Group)
+	assert.Equal(t, "core", target.Spec.Requests[2].StaleList.Group)
 	assert.Equal(t, "default", target.Spec.Requests[2].StaleList.Namespace)
 	assert.Equal(t, 0, target.Spec.Requests[2].StaleList.Limit)
 	assert.Equal(t, "app=x2", target.Spec.Requests[2].StaleList.Selector)
@@ -107,7 +115,7 @@ spec:
 	assert.NotNil(t, target.Spec.Requests[4].Put)
 	assert.Equal(t, "configmaps", target.Spec.Requests[4].Put.Resource)
 	assert.Equal(t, "v1", target.Spec.Requests[4].Put.Version)
-	assert.Equal(t, "core", target.Spec.Requests[0].StaleGet.Group)
+	assert.Equal(t, "core", target.Spec.Requests[4].Put.Group)
 	assert.Equal(t, "kperf", target.Spec.Requests[4].Put.Namespace)
 	assert.Equal(t, "kperf-", target.Spec.Requests[4].Put.Name)
 	assert.Equal(t, 1000, target.Spec.Requests[4].Put.KeySpaceSize)
@@ -120,6 +128,9 @@ spec:
 	assert.Equal(t, "main", target.Spec.Requests[5].GetPodLog.Container)
 	assert.Equal(t, int64(1000), *target.Spec.Requests[5].GetPodLog.TailLines)
 	assert.Equal(t, int64(1024), *target.Spec.Requests[5].GetPodLog.LimitBytes)
+
+	assert.Equal(t, 250, target.Spec.Requests[6].Shares)
+	assert.NotNil(t, target.Spec.Requests[6].WatchList)
 
 	assert.NoError(t, target.Validate())
 }
