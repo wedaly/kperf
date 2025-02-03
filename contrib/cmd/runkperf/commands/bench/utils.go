@@ -145,7 +145,9 @@ func newLoadProfileFromEmbed(cliCtx *cli.Context, name string) (_name string, _s
 				return fmt.Errorf("failed to parse %s affinity: %w", rgAffinity, err)
 			}
 
-			spec.Profile.Spec.Total = reqs
+			if reqs != 0 {
+				spec.Profile.Spec.Total = reqs
+			}
 			spec.NodeAffinity = affinityLabels
 			spec.Profile.Spec.ContentType = types.ContentType(cliCtx.String("content-type"))
 			data, _ := yaml.Marshal(spec)
