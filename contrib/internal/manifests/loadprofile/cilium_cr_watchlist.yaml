@@ -1,0 +1,24 @@
+# This is the same as cilium_cr_list, but using watchlist.
+count: 10
+loadProfile:
+  version: 1
+  description: cilium watchlist profile
+  spec:
+    rate: 20
+    total: 12000
+    conns: 500
+    client: 500
+    contentType: json
+    disableHTTP2: false
+    requests:
+      - watchList:
+          group: cilium.io
+          version: v2
+          resource: ciliumidentities
+        shares: 1000
+      - watchList:
+          group: cilium.io
+          version: v2
+          resource: ciliumendpoints
+          namespace: "default"
+        shares: 1000

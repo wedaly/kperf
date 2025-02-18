@@ -26,6 +26,7 @@ const (
 	installCiliumCRDsFlag  = "install-cilium-crds"
 	numCEPFlag             = "num-cilium-endpoints"
 	numCIDFlag             = "num-cilium-identities"
+	watchlistFlag          = "watchlist"
 )
 
 var benchCiliumCustomResourceListCase = cli.Command{
@@ -53,6 +54,10 @@ var benchCiliumCustomResourceListCase = cli.Command{
 				Usage: "Number of CiliumEndpoints to generate (default: 1000)",
 				Value: 1000,
 			},
+			cli.BoolFlag{
+				Name:  watchlistFlag,
+				Usage: "Use watchList instead of List for Cilium CRs",
+			},
 		},
 		commonFlags...,
 	),
@@ -69,7 +74,12 @@ var benchCiliumCustomResourceListCase = cli.Command{
 func ciliumCustomResourceListRun(cliCtx *cli.Context) (*internaltypes.BenchmarkReport, error) {
 	ctx := context.Background()
 
-	rgCfgFile, rgSpec, rgCfgFileDone, err := newLoadProfileFromEmbed(cliCtx, "loadprofile/cilium_cr_list.yaml")
+	loadProfilePath := "loadprofile/cilium_cr_list.yaml"
+	if cliCtx.Bool(watchlistFlag) {
+		loadProfilePath = "loadprofile/cilium_cr_watchlist.yaml"
+	}
+
+	rgCfgFile, rgSpec, rgCfgFileDone, err := newLoadProfileFromEmbed(cliCtx, loadProfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -102,12 +112,13 @@ func ciliumCustomResourceListRun(cliCtx *cli.Context) (*internaltypes.BenchmarkR
 	}
 
 	return &internaltypes.BenchmarkReport{
-		Description: fmt.Sprintf(`Deploy %d CiliumIdentities and %d CiliumEndpoints, then run stale list requests against them`, numCID, numCEP),
+		Description: fmt.Sprintf(`Deploy %d CiliumIdentities and %d CiliumEndpoints, then retrieve them`, numCID, numCEP),
 		LoadSpec:    *rgSpec,
 		Result:      *rgResult,
 		Info: map[string]interface{}{
 			"numCiliumIdentities": numCID,
 			"numCiliumEndpoints":  numCEP,
+			"watchlist":           cliCtx.Bool(watchlistFlag),
 		},
 	}, nil
 }
